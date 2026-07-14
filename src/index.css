@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-yard-navy: #10192B;
-  --color-yard-orange: #E8590C;
+  --color-yard-navy: #0F1D73;
+  --color-yard-green: #087A55;
+  --color-yard-blue: #0F1D73;
+  --color-yard-red: #E30613;
   --color-yard-fog: #F4F6F8;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
@@ -16,8 +18,8 @@
   --otli-muted: #64748b;
   --otli-border: #dbe4ee;
   --otli-bg: #f4f7fb;
-  --otli-orange: #E8590C;
-  --otli-orange-dark: #10192B;
+  --otli-green: #087A55;
+  --otli-blue: #0F1D73;
 }
 
 * {
@@ -32,7 +34,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 8% 8%, rgba(232, 89, 12, 0.10), transparent 30%),
+    radial-gradient(circle at 8% 8%, rgba(8, 122, 85, 0.10), transparent 30%),
     radial-gradient(circle at 92% 0%, rgba(59, 130, 246, 0.09), transparent 28%),
     linear-gradient(180deg, #f8fafc 0%, var(--otli-bg) 100%);
   color: var(--otli-ink);
@@ -57,7 +59,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(232, 89, 12, 0.35);
+  outline: 3px solid rgba(8, 122, 85, 0.35);
   outline-offset: 3px;
 }
 
@@ -74,7 +76,7 @@ a {
 }
 
 ::selection {
-  background: rgba(232, 89, 12, 0.20);
+  background: rgba(8, 122, 85, 0.20);
 }
 
 .input {
@@ -99,18 +101,26 @@ a {
 }
 
 .input:focus {
-  border-color: var(--otli-orange);
+  border-color: var(--otli-green);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(232, 89, 12, 0.12), 0 12px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 0 0 4px rgba(8, 122, 85, 0.12), 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 
 .input.field-invalid,
 .field-invalid,
-.field-invalid-target,
 .modern-date-picker:has(.field-invalid) {
   border-color: #ef4444 !important;
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.10) !important;
+}
+
+[data-field-control] {
+  min-width: 0;
+}
+
+[data-field-control] + .field-validation-error {
+  position: static;
+  width: 100%;
 }
 
 .field-validation-error {
@@ -159,14 +169,14 @@ label + .field-validation-error,
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #E8590C 0%, #f97316 100%);
+  background: linear-gradient(135deg, #087A55 0%, #0F1D73 100%);
   color: white;
-  box-shadow: 0 16px 30px rgba(232, 89, 12, 0.22);
+  box-shadow: 0 16px 30px rgba(8, 122, 85, 0.22);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 20px 36px rgba(232, 89, 12, 0.28);
+  box-shadow: 0 20px 36px rgba(8, 122, 85, 0.28);
 }
 
 .btn-primary:active:not(:disabled),
@@ -219,7 +229,7 @@ label + .field-validation-error,
 
 .card-hover:hover {
   transform: translateY(-2px);
-  border-color: rgba(232, 89, 12, 0.35);
+  border-color: rgba(8, 122, 85, 0.35);
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.11);
 }
 
@@ -235,9 +245,9 @@ label + .field-validation-error,
   align-items: center;
   gap: 0.45rem;
   border-radius: 999px;
-  border: 1px solid rgba(232, 89, 12, 0.18);
+  border: 1px solid rgba(8, 122, 85, 0.18);
   background: rgba(255, 247, 237, 0.92);
-  color: #E8590C;
+  color: #087A55;
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -308,7 +318,7 @@ label + .field-validation-error,
   border: 1px solid #e2e8f0;
   border-radius: 24px;
   background:
-    radial-gradient(circle at 50% 15%, rgba(232, 89, 12, 0.08), transparent 30%),
+    radial-gradient(circle at 50% 15%, rgba(8, 122, 85, 0.08), transparent 30%),
     linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   cursor: grab;
   perspective: 1300px;
@@ -510,22 +520,22 @@ label + .field-validation-error,
 }
 
 .modern-date-picker:hover {
-  border-color: rgba(232, 89, 12, 0.45);
+  border-color: rgba(8, 122, 85, 0.45);
   background: #ffffff;
   transform: translateY(-1px);
 }
 
 .modern-date-picker:focus-within {
-  border-color: var(--otli-orange);
+  border-color: var(--otli-green);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(232, 89, 12, 0.12), 0 18px 38px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 4px rgba(8, 122, 85, 0.12), 0 18px 38px rgba(15, 23, 42, 0.08);
 }
 
 .modern-date-icon {
   display: grid;
   place-items: center;
   width: 48px;
-  color: #E8590C;
+  color: #087A55;
 }
 
 .modern-date-input {
@@ -544,7 +554,7 @@ label + .field-validation-error,
   border-radius: 999px;
   padding: 0.35rem;
   margin-right: 0.35rem;
-  background-color: rgba(232, 89, 12, 0.1);
+  background-color: rgba(8, 122, 85, 0.1);
 }
 
 .modern-date-input:disabled {
@@ -567,22 +577,22 @@ label + .field-validation-error,
 }
 
 .modern-date-picker:hover {
-  border-color: rgba(232, 89, 12, 0.55);
+  border-color: rgba(8, 122, 85, 0.55);
   background: #ffffff;
   transform: translateY(-1px);
 }
 
 .modern-date-picker:focus-within {
-  border-color: var(--otli-orange);
+  border-color: var(--otli-green);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(232, 89, 12, 0.12), 0 18px 42px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 0 0 4px rgba(8, 122, 85, 0.12), 0 18px 42px rgba(15, 23, 42, 0.1);
 }
 
 .modern-date-icon {
   display: grid;
   flex: 0 0 48px;
   place-items: center;
-  color: #E8590C;
+  color: #087A55;
 }
 
 .modern-date-wrapper {
@@ -643,7 +653,7 @@ label + .field-validation-error,
 
 .otli-datepicker-calendar .react-datepicker__header {
   border-bottom: 1px solid rgba(226, 232, 240, 0.92) !important;
-  background: linear-gradient(135deg, #E8590C, #f97316) !important;
+  background: linear-gradient(135deg, #087A55, #0F1D73) !important;
   padding: 1rem 0.75rem 0.75rem !important;
 }
 
@@ -685,14 +695,14 @@ label + .field-validation-error,
 
 .otli-datepicker-calendar .react-datepicker__day:hover {
   background: #ffedd5 !important;
-  color: #E8590C !important;
+  color: #087A55 !important;
 }
 
 .otli-datepicker-calendar .react-datepicker__day--keyboard-selected,
 .otli-datepicker-calendar .react-datepicker__day--selected,
 .otli-datepicker-calendar .react-datepicker__day--in-selecting-range,
 .otli-datepicker-calendar .react-datepicker__day--in-range {
-  background: #E8590C !important;
+  background: #087A55 !important;
   color: #ffffff !important;
 }
 
@@ -720,16 +730,16 @@ label + .field-validation-error,
 
 .otli-datepicker-calendar .react-datepicker__time-list-item:hover {
   background: #ffedd5 !important;
-  color: #E8590C !important;
+  color: #087A55 !important;
 }
 
 .otli-datepicker-calendar .react-datepicker__time-list-item--selected {
-  background: #E8590C !important;
+  background: #087A55 !important;
   color: #ffffff !important;
 }
 
 .react-datepicker__close-icon::after {
-  background: #E8590C !important;
+  background: #087A55 !important;
   font-weight: 900 !important;
 }
 

@@ -81,7 +81,7 @@ const Login = () => {
       icon: FiUsers,
       value: "10K+",
       label: "Active Users",
-      color: "text-yard-orange",
+      color: "text-yard-green",
     },
     {
       icon: FiBarChart2,
@@ -100,10 +100,10 @@ const Login = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Section - Light Gradient */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yard-fog via-orange-50 to-slate-100 flex-col items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yard-fog via-emerald-50 to-slate-100 flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Decorative Light Circles */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-orange-300/25 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-300/25 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-slate-300/25 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
           <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-slate-300/25 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
         </div>
@@ -111,7 +111,7 @@ const Login = () => {
         <div className="relative z-10 text-center max-w-lg w-full">
           {/* Large Logo */}
           <div className="mb-6 flex justify-center">
-            <div className="w-64 h-64 bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl shadow-orange-200/40 border border-white/50 flex items-center justify-center">
+            <div className="w-64 h-64 bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl shadow-emerald-200/40 border border-white/50 flex items-center justify-center">
               <img
                 src={logo}
                 alt="Admin Logo"
@@ -145,7 +145,7 @@ const Login = () => {
 
           {/* Features */}
           <div className="space-y-3 text-left">
-            <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-orange-200 hover:border-yard-orange/50 transition-all duration-200">
+            <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-emerald-200 hover:border-yard-green/50 transition-all duration-200">
               <span className="text-xl">🔒</span>
               <span className="text-sm text-gray-700">
                 Enterprise-grade security
@@ -176,7 +176,7 @@ const Login = () => {
         <div className="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-gray-200/50 p-8 space-y-6 border border-white/50">
           {/* Mobile Logo - Large */}
           <div className="lg:hidden flex flex-col items-center">
-            <div className="w-32 h-32 mb-4 bg-gradient-to-br from-yard-fog via-orange-50 to-slate-100 rounded-2xl p-4 shadow-lg shadow-orange-200/40 flex items-center justify-center">
+            <div className="w-32 h-32 mb-4 bg-gradient-to-br from-yard-fog via-emerald-50 to-slate-100 rounded-2xl p-4 shadow-lg shadow-emerald-200/40 flex items-center justify-center">
               <img
                 src={logo}
                 alt="Admin Logo"
@@ -242,7 +242,7 @@ const Login = () => {
               />
               <a
                 href="#"
-                className="text-sm text-yard-orange hover:text-orange-700 font-medium transition-colors"
+                className="text-sm text-yard-green hover:text-emerald-700 font-medium transition-colors"
               >
                 Forgot password?
               </a>
@@ -256,7 +256,7 @@ const Login = () => {
               loading={loading}
               disabled={loading}
               icon={<FiLogIn className="h-5 w-5" />}
-              className="bg-yard-orange hover:bg-orange-700 shadow-lg shadow-orange-200/50"
+              className="bg-yard-green hover:bg-emerald-700 shadow-lg shadow-emerald-200/50"
             >
               Sign In
             </Button>

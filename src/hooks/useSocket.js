@@ -3,7 +3,6 @@ import { io } from "socket.io-client"
 import { SOCKET_URL } from "../lib/api"
 
 const realtimeEvents = [
-  "socket:connected",
   "client:registered",
   "client:approved",
   "client:rejected",

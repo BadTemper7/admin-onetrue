@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { CalendarClock, Edit3, MapPin, PackageCheck, RefreshCw, Search, SlidersHorizontal, Warehouse, X } from "lucide-react"
 import Alert from "../../components/Alert"
 import { api, getApiError } from "../../lib/api"
 import Pagination from "../../components/ui/Pagination"
 import { usePagination } from "../../hooks/usePagination"
+import { useClickOutside } from "../../hooks/useClickOutside"
 
 const bookingStatusesForInventory = [
   "approved_area_assigned",
@@ -64,14 +65,14 @@ const Field = ({ label, children, hint }) => (
 )
 
 const StatCard = ({ label, value, icon: Icon }) => (
-  <div className="card p-5">
+  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
     <div className="flex items-center justify-between gap-4">
       <div>
-        <div className="text-sm font-bold text-slate-500">{label}</div>
+        <div className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</div>
         <div className="mt-2 text-3xl font-black text-slate-950">{value}</div>
       </div>
-      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-orange-50 text-orange-700">
-        <Icon size={22} />
+      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-emerald-700 shadow-sm">
+        <Icon size={20} />
       </div>
     </div>
   </div>
@@ -93,7 +94,7 @@ const LocationModal = ({ open, container, areas, blocks, slots, loadingBlocks, s
       <div className="w-full max-w-3xl overflow-hidden rounded-[1.5rem] bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-orange-700">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
               <MapPin size={14} /> Relocate Container
             </div>
             <h2 className="mt-3 text-2xl font-black text-slate-950">{container.containerNumber}</h2>
@@ -152,7 +153,7 @@ const LocationModal = ({ open, container, areas, blocks, slots, loadingBlocks, s
                 {slots.slice(0, 80).map((slot) => {
                   const isCurrent = slot.key === currentSlotKey
                   return (
-                    <span key={`${slot.key}-${slot.reference}`} className={`rounded-full px-3 py-1 text-xs font-black ${isCurrent ? "bg-orange-50 text-orange-700" : slot.type === "occupied" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
+                    <span key={`${slot.key}-${slot.reference}`} className={`rounded-full px-3 py-1 text-xs font-black ${isCurrent ? "bg-emerald-50 text-emerald-700" : slot.type === "occupied" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
                       B{slot.bay} R{slot.row} T{slot.tier}{isCurrent ? " • current" : ""}
                     </span>
                   )
@@ -180,6 +181,7 @@ const AdminInventory = () => {
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+  const filterRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [alert, setAlert] = useState({ type: "", message: "" })
 
@@ -195,6 +197,8 @@ const AdminInventory = () => {
     return containers.filter((container) => container.source === "booking" && bookingStatusesForInventory.includes(container.bookingStatus))
   }, [containers])
 
+
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters);
   const filteredContainers = useMemo(() => {
     const term = search.trim().toLowerCase()
     return bookingContainers.filter((container) => {
@@ -375,7 +379,7 @@ const AdminInventory = () => {
       <div className="card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-black uppercase tracking-wide text-orange-700">Inventory Module</div>
+            <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Inventory Module</div>
             <h1 className="mt-1 text-2xl font-black text-slate-950">Assigned Container Inventory</h1>
             <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-500">
               Review assigned containers, confirm physical storage after Gate-In, and relocate containers to an available yard slot when needed.
@@ -418,7 +422,7 @@ const AdminInventory = () => {
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={19} />
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => setShowFilters((current) => !current)}
@@ -436,7 +440,7 @@ const AdminInventory = () => {
                     <div className="text-xs font-black uppercase tracking-wide text-slate-500">Inventory Filters</div>
                     <button
                       type="button"
-                      className="text-xs font-black text-orange-700"
+                      className="text-xs font-black text-emerald-700"
                       onClick={() => {
                         setSelectedAreaId("")
                         setSelectedStatus("all")

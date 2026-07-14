@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Edit3,
   Eye,
@@ -17,6 +17,7 @@ import Alert from "../../components/Alert"
 import { api, getApiError } from "../../lib/api"
 import Pagination from "../../components/ui/Pagination"
 import { usePagination } from "../../hooks/usePagination"
+import { useClickOutside } from "../../hooks/useClickOutside"
 
 const emptyAreaForm = {
   name: "",
@@ -26,7 +27,7 @@ const emptyAreaForm = {
   containerSize: 20,
   capacityTeu: 1,
   status: "active",
-  color: "#E8590C",
+  color: "#087A55",
   sortOrder: 0,
   description: "",
 }
@@ -85,10 +86,13 @@ const AdminYardAreas = () => {
   const [success, setSuccess] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+  const filterRef = useRef(null)
   const [selectedStatuses, setSelectedStatuses] = useState(areaStatuses)
   const [showAreaModal, setShowAreaModal] = useState(false)
   const [selectedArea, setSelectedArea] = useState(null)
 
+
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters);
   const autoCapacity = useMemo(
     () => calculateAreaCapacity(areaForm),
     [areaForm.lineCount, areaForm.rowCount, areaForm.tierCount, areaForm.containerSize],
@@ -224,7 +228,7 @@ const AdminYardAreas = () => {
       containerSize: area.containerSize || 20,
       capacityTeu: area.capacityTeu || 1,
       status: area.status || "active",
-      color: area.color || "#E8590C",
+      color: area.color || "#087A55",
       sortOrder: area.sortOrder || 0,
       description: area.description || "",
     })
@@ -269,7 +273,7 @@ const AdminYardAreas = () => {
       <div className="card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-black uppercase tracking-wide text-orange-700">Yard Area Module</div>
+            <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Yard Area Module</div>
             <h2 className="mt-1 text-2xl font-black text-slate-950">Yard Area Setup</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
               Create and maintain the physical yard areas used for block placement, container assignment, and capacity monitoring.
@@ -319,7 +323,7 @@ const AdminYardAreas = () => {
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={19} />
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => setShowFilters((current) => !current)}
@@ -336,7 +340,7 @@ const AdminYardAreas = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedStatuses(areaStatuses)}
-                      className="text-xs font-black text-orange-700"
+                      className="text-xs font-black text-emerald-700"
                     >
                       Reset
                     </button>
@@ -434,7 +438,7 @@ const AdminYardAreas = () => {
           <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
               <div>
-                <div className="text-sm font-black uppercase tracking-wide text-orange-700">Yard Area Form</div>
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Yard Area Form</div>
                 <h3 className="mt-1 text-2xl font-black text-slate-950">{editingAreaId ? "Edit Yard Area" : "Create Yard Area"}</h3>
                 <p className="mt-1 text-sm font-semibold text-slate-500">Set the physical dimensions, container size, and capacity.</p>
               </div>
@@ -510,7 +514,7 @@ const AdminYardAreas = () => {
           <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
               <div>
-                <div className="text-sm font-black uppercase tracking-wide text-orange-700">Area Details</div>
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Area Details</div>
                 <div className="mt-2 flex items-center gap-3">
                   <span className="h-5 w-5 rounded-full" style={{ background: selectedArea.color }} />
                   <h3 className="text-2xl font-black text-slate-950">{selectedArea.name}</h3>
@@ -561,7 +565,7 @@ const StatCard = ({ label, value, icon: Icon, tone }) => {
   const toneClass = {
     slate: "border-slate-200 bg-slate-50 text-slate-700",
     blue: "border-blue-100 bg-blue-50 text-blue-700",
-    orange: "border-orange-100 bg-orange-50 text-orange-700",
+    orange: "border-emerald-100 bg-emerald-50 text-emerald-700",
     amber: "border-amber-100 bg-amber-50 text-amber-700",
   }[tone]
 

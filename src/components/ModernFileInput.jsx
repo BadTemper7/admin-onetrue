@@ -28,14 +28,14 @@ const ModernFileInput = ({
         disabled
           ? "cursor-not-allowed border-slate-200 bg-slate-100 opacity-70"
           : file
-            ? "cursor-pointer border-orange-300 bg-orange-50/70 shadow-sm shadow-orange-100/60 hover:border-orange-400"
-            : "cursor-pointer border-slate-300 bg-white hover:border-orange-300 hover:bg-orange-50/40"
+            ? "cursor-pointer border-emerald-300 bg-emerald-50/70 shadow-sm shadow-emerald-100/60 hover:border-emerald-400"
+            : "cursor-pointer border-slate-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/40"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition ${
-            file ? "bg-orange-600 text-white shadow-lg shadow-orange-100" : "bg-slate-100 text-slate-500 group-hover:bg-orange-100 group-hover:text-orange-700"
+            file ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700"
           }`}
         >
           {file ? <CheckCircle2 size={21} /> : <UploadCloud size={21} />}
@@ -46,7 +46,7 @@ const ModernFileInput = ({
             <span className="text-sm font-black text-slate-800">
               {label} {required && <span className="text-red-600">*</span>}
             </span>
-            {file && <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-orange-700 ring-1 ring-orange-100">Selected</span>}
+            {file && <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">Selected</span>}
           </div>
 
           <div className="mt-1 truncate text-xs font-bold text-slate-500">
@@ -54,7 +54,7 @@ const ModernFileInput = ({
           </div>
 
           {file ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-orange-700">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-emerald-700">
               <FileText size={13} /> {fileSize || "Ready to upload"}
             </div>
           ) : (

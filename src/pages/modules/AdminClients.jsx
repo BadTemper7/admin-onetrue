@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Alert from "../../components/Alert";
 import { api, getApiError } from "../../lib/api";
 import Pagination from "../../components/ui/Pagination";
 import { usePagination } from "../../hooks/usePagination";
+import { useClickOutside } from "../../hooks/useClickOutside";
 
 const statusClass = (status) => {
   if (status === "verified" || status === "active") {
@@ -38,6 +39,7 @@ const AdminClients = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const filterRef = useRef(null);
   const [selectedFilters, setSelectedFilters] = useState([
     "pending",
     "verified",
@@ -46,6 +48,8 @@ const AdminClients = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [rejectReasons, setRejectReasons] = useState({});
 
+
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters);
   const totals = useMemo(() => {
     return {
       verified: clients.filter((client) => isVerifiedStatus(client.status))
@@ -156,7 +160,7 @@ const AdminClients = () => {
       <div className="card p-5">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-black uppercase tracking-wide text-orange-700">
+            <div className="text-sm font-black uppercase tracking-wide text-emerald-700">
               Account Flow
             </div>
             <h2 className="mt-1 text-2xl font-black text-slate-950">
@@ -239,7 +243,7 @@ const AdminClients = () => {
               </svg>
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => setShowFilters((prev) => !prev)}
@@ -271,7 +275,7 @@ const AdminClients = () => {
 
                     <button
                       type="button"
-                      className="text-xs font-black text-orange-700"
+                      className="text-xs font-black text-emerald-700"
                       onClick={() =>
                         setSelectedFilters(["pending", "verified", "rejected"])
                       }
@@ -364,7 +368,7 @@ const AdminClients = () => {
                         client.documents.map((doc) => (
                           <a
                             key={doc.publicId}
-                            className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-orange-700 hover:bg-orange-50"
+                            className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
                             href={doc.secureUrl || doc.url}
                             target="_blank"
                             rel="noreferrer"
@@ -430,7 +434,7 @@ const AdminClients = () => {
           <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
               <div>
-                <div className="text-sm font-black uppercase tracking-wide text-orange-700">
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">
                   Account Review
                 </div>
                 <h3 className="mt-1 text-2xl font-black text-slate-950">
@@ -517,7 +521,7 @@ const AdminClients = () => {
                         href={doc.secureUrl || doc.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-black text-orange-700 hover:bg-orange-100"
+                        className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100"
                       >
                         View {doc.label}
                       </a>

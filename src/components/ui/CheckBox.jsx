@@ -49,8 +49,8 @@ const CheckBox = ({
             disabled={disabled}
             className={`
               ${sizes[size]}
-              ${error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-orange-500"}
-              text-yard-orange 
+              ${error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-emerald-500"}
+              text-yard-green 
               rounded 
               focus:ring-2 
               ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}

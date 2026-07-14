@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Boxes, CalendarClock, Layers3, RefreshCw, Rotate3D, Search, Warehouse } from "lucide-react"
+import { Boxes, CalendarClock, Layers3, RefreshCw, Rotate3D, Search, SlidersHorizontal, Warehouse } from "lucide-react"
 import Alert from "../../components/Alert"
 import { api, getApiError } from "../../lib/api"
 import Pagination from "../../components/ui/Pagination"
 import { usePagination } from "../../hooks/usePagination"
+import { useClickOutside } from "../../hooks/useClickOutside"
 
 const MAP_WIDTH = 980
 const MAP_HEIGHT = 600
@@ -139,15 +140,21 @@ const Field = ({ label, children }) => (
   </label>
 )
 
-const StatCard = ({ label, value, icon: Icon }) => (
-  <div className="card p-5">
+const statToneClasses = {
+  slate: "border-slate-200 bg-slate-50 text-slate-950",
+  blue: "border-blue-100 bg-blue-50 text-blue-700",
+  emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+}
+
+const StatCard = ({ label, value, icon: Icon, tone = "slate" }) => (
+  <div className={`rounded-2xl border p-5 ${statToneClasses[tone]}`}>
     <div className="flex items-center justify-between gap-4">
       <div>
-        <div className="text-sm font-bold text-slate-500">{label}</div>
-        <div className="mt-2 text-3xl font-black text-slate-950">{value}</div>
+        <div className="text-xs font-black uppercase tracking-wide opacity-75">{label}</div>
+        <div className="mt-2 text-3xl font-black">{value}</div>
       </div>
-      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-orange-50 text-orange-700">
-        <Icon size={22} />
+      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/90 shadow-sm">
+        <Icon size={20} />
       </div>
     </div>
   </div>
@@ -157,7 +164,7 @@ const AreaList = ({ areas, selectedAreaId, onSelectArea, containers }) => {
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2">
-        <Warehouse size={18} className="text-orange-700" />
+        <Warehouse size={18} className="text-emerald-700" />
         <h2 className="text-lg font-black text-slate-950">Yard Areas</h2>
       </div>
       <p className="mt-1 text-sm font-medium text-slate-500">Click an area to show its blocks and 3D container allocation.</p>
@@ -176,21 +183,21 @@ const AreaList = ({ areas, selectedAreaId, onSelectArea, containers }) => {
               key={area.id}
               type="button"
               onClick={() => onSelectArea(area.id)}
-              className={`rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active ? "border-orange-400 bg-orange-50 ring-4 ring-orange-100" : "border-slate-200 bg-white"}`}
+              className={`rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active ? "border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100" : "border-slate-200 bg-white"}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xl font-black text-slate-950">{area.name}</div>
                   <div className="mt-1 text-xs font-black uppercase tracking-wide text-slate-400">{area.containerSize}ft • {area.lineCount}L / {area.rowCount}R / {area.tierCount}H</div>
                 </div>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700 shadow-sm">{areaContainers.length} CNTR</span>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-700 shadow-sm">{areaContainers.length} CNTR</span>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs font-black text-slate-500">
                 <span>{Math.round(used * 100) / 100} / {total} TEU</span>
                 <span>{usage}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-orange-600" style={{ width: `${usage}%` }} />
+                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${usage}%` }} />
               </div>
             </button>
           )
@@ -218,12 +225,12 @@ const BlockList = ({ selectedArea, blocks, selectedBlockId, onSelectBlock, conta
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Boxes size={18} className="text-orange-700" />
+            <Boxes size={18} className="text-emerald-700" />
             <h2 className="text-lg font-black text-slate-950">{selectedArea.name} Blocks</h2>
           </div>
           <p className="mt-1 text-sm font-medium text-slate-500">Click a block to focus the 3D viewer on containers in that block.</p>
         </div>
-        <button type="button" onClick={() => onSelectBlock("")} className={`rounded-2xl px-4 py-2 text-sm font-black ${!selectedBlockId ? "bg-orange-50 text-orange-700" : "bg-slate-100 text-slate-500"}`}>
+        <button type="button" onClick={() => onSelectBlock("")} className={`rounded-2xl px-4 py-2 text-sm font-black ${!selectedBlockId ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
           View all blocks
         </button>
       </div>
@@ -242,14 +249,14 @@ const BlockList = ({ selectedArea, blocks, selectedBlockId, onSelectBlock, conta
               key={block.id}
               type="button"
               onClick={() => onSelectBlock(block.id)}
-              className={`rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active ? "border-orange-400 bg-orange-50 ring-4 ring-orange-100" : "border-slate-200 bg-white"}`}
+              className={`rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active ? "border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100" : "border-slate-200 bg-white"}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-black text-slate-950">{block.code}</div>
                   <div className="text-xs font-bold text-slate-500">{block.name}</div>
                 </div>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700 shadow-sm">{blockContainers.length} CNTR</span>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-700 shadow-sm">{blockContainers.length} CNTR</span>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-black text-slate-600">
                 <div className="rounded-xl bg-slate-50 p-2">{getSlotCounts(block, selectedArea).bayCount}<br /><span className="text-[10px] uppercase text-slate-400">Bay</span></div>
@@ -261,7 +268,7 @@ const BlockList = ({ selectedArea, blocks, selectedBlockId, onSelectBlock, conta
                 <span>{usage}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-orange-600" style={{ width: `${usage}%` }} />
+                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${usage}%` }} />
               </div>
             </button>
           )
@@ -663,8 +670,12 @@ const AdminStorageMonitoring = () => {
   const [selectedAreaId, setSelectedAreaId] = useState("")
   const [selectedBlockId, setSelectedBlockId] = useState("")
   const [search, setSearch] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const filterRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [alert, setAlert] = useState({ type: "", message: "" })
+
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters)
 
   const selectedArea = useMemo(() => areas.find((area) => area.id === selectedAreaId) || null, [areas, selectedAreaId])
 
@@ -760,82 +771,81 @@ const AdminStorageMonitoring = () => {
 
   return (
     <div className="space-y-6">
-      <div className="card p-6">
+      <section className="card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-orange-700">
-              <Warehouse size={14} /> Storage Monitoring
+            <div className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-emerald-700"><Warehouse size={15} /> Yard Module</div>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">Storage Monitoring</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-500">Review stored containers, assigned yard locations, storage duration, and visual block allocation from one monitoring page.</p>
+          </div>
+          <button type="button" onClick={handleRefresh} className="btn-secondary shrink-0" disabled={loading}><RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh</button>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <StatCard label="Selected Area" value={selectedArea?.name || "All Areas"} icon={Warehouse} tone="slate" />
+          <StatCard label="Stored Containers" value={selectedAreaContainers.length} icon={Boxes} tone="blue" />
+          <StatCard label="Used TEU" value={Math.round(totalTeu * 100) / 100} icon={CalendarClock} tone="emerald" />
+        </div>
+        <div className="mt-4"><Alert type={alert.type}>{alert.message}</Alert></div>
+      </section>
+
+      <section className="card overflow-visible">
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h3 className="text-lg font-black text-slate-950">Stored Container List</h3>
+            <p className="text-sm font-semibold text-slate-500">Search and filter stored containers before reviewing the visual yard allocation.</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input className="input w-full !rounded-2xl !py-3 !pl-10 !pr-4 text-sm sm:w-[340px]" placeholder="Search container, booking, customer..." value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <h1 className="mt-3 text-3xl font-black text-slate-950">Areas, Blocks, and Stored Containers</h1>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
-              Storage Monitoring starts as a list of areas and blocks. Once an area or block is clicked, the 3D view shows the stored containers in their exact Block, Bay, Row, and Tier location.
-            </p>
-          </div>
-          <button type="button" onClick={handleRefresh} className="btn-secondary" disabled={loading}>
-            <RefreshCw size={16} /> Refresh
-          </button>
-        </div>
-      </div>
-
-      <Alert type={alert.type}>{alert.message}</Alert>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Selected Area" value={selectedArea?.name || "All"} icon={Warehouse} />
-        <StatCard label="Stored Containers" value={selectedAreaContainers.length} icon={Boxes} />
-        <StatCard label="Used TEU" value={Math.round(totalTeu * 100) / 100} icon={CalendarClock} />
-      </div>
-
-      <div className="card p-5">
-        <Field label="Search Stored Containers">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-            <input className="input pl-10" placeholder="Search container number, booking reference, customer, area, or block" value={search} onChange={(event) => setSearch(event.target.value)} />
-          </div>
-        </Field>
-      </div>
-
-      <AreaList areas={areas} selectedAreaId={selectedAreaId} onSelectArea={setSelectedAreaId} containers={storedContainers} />
-      <BlockList selectedArea={selectedArea} blocks={blocks} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} containers={selectedAreaContainers} />
-      <Storage3DViewer selectedArea={selectedArea} selectedBlockId={selectedBlockId} blocks={blocks} containers={selectedBlockContainers} />
-
-      <div className="card overflow-hidden">
-        <div className="border-b border-slate-200 p-5">
-          <div className="flex items-center gap-2">
-            <Boxes size={18} className="text-orange-700" />
-            <h2 className="text-lg font-black text-slate-950">Stored Container List</h2>
+            <div className="relative" ref={filterRef}>
+              <button type="button" onClick={() => setShowFilters((current) => !current)} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 sm:w-auto">
+                <SlidersHorizontal size={18} /> Filters
+              </button>
+              {showFilters && (
+                <div className="absolute right-0 z-40 mt-2 w-[310px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <p className="text-sm font-black text-slate-950">Filter Storage</p>
+                    <button type="button" onClick={() => { setSelectedAreaId(""); setSelectedBlockId("") }} className="text-xs font-black text-emerald-700">Reset</button>
+                  </div>
+                  <div className="mt-4 space-y-4">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Yard Area</span>
+                      <select className="input !py-3" value={selectedAreaId} onChange={(event) => setSelectedAreaId(event.target.value)}>
+                        <option value="">All yard areas</option>
+                        {areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Block</span>
+                      <select className="input !py-3" value={selectedBlockId} onChange={(event) => setSelectedBlockId(event.target.value)} disabled={!selectedAreaId}>
+                        <option value="">All blocks</option>
+                        {blocks.map((block) => <option key={block.id} value={block.id}>{block.code || block.name}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500">Showing {selectedBlockContainers.length} stored containers</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-5 py-3">Container</th>
-                <th className="px-5 py-3">Customer</th>
-                <th className="px-5 py-3">Area / Block / Slot</th>
-                <th className="px-5 py-3">Size / Type</th>
-                <th className="px-5 py-3">Storage Start</th>
-                <th className="px-5 py-3">Days</th>
-                <th className="px-5 py-3">Status</th>
-              </tr>
+              <tr><th className="px-5 py-3">Container</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Area / Block / Slot</th><th className="px-5 py-3">Size / Type</th><th className="px-5 py-3">Storage Start</th><th className="px-5 py-3">Days</th><th className="px-5 py-3">Status</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {selectedBlockContainers.length === 0 && !loading && (
-                <tr><td colSpan="7" className="px-5 py-8 text-center font-semibold text-slate-500">No stored containers found for the selected view.</td></tr>
-              )}
+              {selectedBlockContainers.length === 0 && !loading && <tr><td colSpan="7" className="px-5 py-12 text-center font-semibold text-slate-500">No stored containers found for the selected view.</td></tr>}
               {storagePagination.paginatedItems.map((container) => {
                 const displayStatus = container.bookingStatus || container.status
                 const storageDate = container.storageStartDate || container.storedAt || container.updatedAt
                 return (
-                  <tr key={container.id} className="align-top">
-                    <td className="px-5 py-4">
-                      <div className="font-black text-slate-950">{container.containerNumber}</div>
-                      <div className="text-xs font-semibold text-slate-500">{container.bookingReference || container.preAdviceNumber || "-"}</div>
-                    </td>
+                  <tr key={container.id} className="align-top transition hover:bg-slate-50/80">
+                    <td className="px-5 py-4"><div className="font-black text-slate-950">{container.containerNumber}</div><div className="text-xs font-semibold text-slate-500">{container.bookingReference || container.preAdviceNumber || "-"}</div></td>
                     <td className="px-5 py-4 font-semibold text-slate-600">{container.clientName || "-"}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-600">
-                      <div>{container.areaName || "No area"}</div>
-                      <div className="text-xs text-slate-500">{container.blockCode || container.blockName || "No block"} • {container.slotNumber || "No slot"}</div>
-                    </td>
+                    <td className="px-5 py-4 font-semibold text-slate-600"><div>{container.areaName || "No area"}</div><div className="text-xs text-slate-500">{container.blockCode || container.blockName || "No block"} • {container.slotNumber || "No slot"}</div></td>
                     <td className="px-5 py-4 font-semibold text-slate-600">{container.containerSize}ft • {container.containerType?.replace("_", " ")}</td>
                     <td className="px-5 py-4 font-semibold text-slate-600"><CalendarClock className="mr-1 inline" size={14} /> {formatDate(storageDate)}</td>
                     <td className="px-5 py-4 font-black text-slate-950">{daysInYard(storageDate)}</td>
@@ -847,7 +857,18 @@ const AdminStorageMonitoring = () => {
           </table>
         </div>
         <Pagination {...storagePagination} />
-      </div>
+      </section>
+
+      <section className="card p-5">
+        <div className="flex items-center gap-2">
+          <Layers3 size={18} className="text-emerald-700" />
+          <div><h3 className="text-lg font-black text-slate-950">Visual Storage Overview</h3><p className="text-sm font-semibold text-slate-500">Select an area and block to inspect container placement.</p></div>
+        </div>
+      </section>
+
+      <AreaList areas={areas} selectedAreaId={selectedAreaId} onSelectArea={setSelectedAreaId} containers={storedContainers} />
+      <BlockList selectedArea={selectedArea} blocks={blocks} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} containers={selectedAreaContainers} />
+      <Storage3DViewer selectedArea={selectedArea} selectedBlockId={selectedBlockId} blocks={blocks} containers={selectedBlockContainers} />
     </div>
   )
 }

@@ -94,16 +94,16 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-2xl bg-yard-navy p-6 text-white shadow-sm md:p-8">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-emerald-50/60 to-blue-50 p-6 text-slate-950 shadow-sm md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-yard-orange">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-yard-green">
               OTLI operations command center
             </p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">
               Welcome back, {user?.name || "Administrator"}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300">
+            <p className="mt-2 max-w-2xl text-sm font-medium text-slate-600">
               Monitor client verification, bookings, yard capacity, billing, and container movement from one dashboard.
             </p>
           </div>
@@ -111,7 +111,7 @@ const Dashboard = () => {
             type="button"
             onClick={fetchDashboard}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-yard-orange px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-yard-green px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
           >
             <FiRefreshCw className={loading ? "animate-spin" : ""} />
             Refresh dashboard
@@ -134,7 +134,7 @@ const Dashboard = () => {
                 <p className="mt-2 text-3xl font-bold text-yard-navy">{stat.value}</p>
                 <p className="mt-1 text-xs text-slate-400">{stat.helper}</p>
               </div>
-              <div className="rounded-lg bg-orange-50 p-3 text-yard-orange">
+              <div className="rounded-lg bg-emerald-50 p-3 text-yard-green">
                 <stat.icon className="h-5 w-5" />
               </div>
             </div>
@@ -148,7 +148,7 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold text-yard-navy">Quick actions</h2>
             <p className="text-sm text-slate-500">Open the most-used terminal modules.</p>
           </div>
-          <FiActivity className="h-5 w-5 text-yard-orange" />
+          <FiActivity className="h-5 w-5 text-yard-green" />
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {quickActions.map((action) => (
@@ -156,13 +156,13 @@ const Dashboard = () => {
               key={action.path}
               type="button"
               onClick={() => navigate(action.path)}
-              className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-yard-fog p-4 text-left transition hover:border-yard-orange/40 hover:bg-white"
+              className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-yard-fog p-4 text-left transition hover:border-yard-green/40 hover:bg-white"
             >
-              <span className="rounded-md bg-white p-2 text-yard-orange shadow-sm">
+              <span className="rounded-md bg-white p-2 text-yard-green shadow-sm">
                 <action.icon className="h-5 w-5" />
               </span>
               <span className="flex-1 text-sm font-semibold text-slate-700">{action.label}</span>
-              <FiArrowRight className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-yard-orange" />
+              <FiArrowRight className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-yard-green" />
             </button>
           ))}
         </div>
@@ -221,7 +221,7 @@ const Dashboard = () => {
               ["Total TEU capacity", yardSummary.totalTeuSlots || yardSummary.totalAreaCapacityTeu || 0, FiUsers],
             ].map(([label, value, Icon]) => (
               <div key={label} className="flex items-center gap-3 rounded-lg bg-yard-fog p-4">
-                <div className="rounded-md bg-white p-2 text-yard-orange"><Icon /></div>
+                <div className="rounded-md bg-white p-2 text-yard-green"><Icon /></div>
                 <div>
                   <p className="text-xs text-slate-500">{label}</p>
                   <p className="text-xl font-bold text-yard-navy">{value}</p>

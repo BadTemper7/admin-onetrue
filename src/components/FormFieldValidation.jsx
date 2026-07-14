@@ -84,7 +84,8 @@ const getErrorId = (field) => {
 const getPlacementTarget = (field) => {
   const modernFileLabel = field.closest("label")?.querySelector("input[type='file']") ? field.closest("label") : null
   const dateWrapper = field.closest(".modern-date-picker")
-  return modernFileLabel || dateWrapper || field
+  const controlWrapper = field.closest("[data-field-control]")
+  return modernFileLabel || dateWrapper || controlWrapper || field
 }
 
 const removeFieldError = (field) => {

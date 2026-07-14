@@ -6,15 +6,23 @@ import {
   ClipboardCheck,
   ClipboardList,
   CreditCard,
+  Eye,
   MapPinned,
   PackageCheck,
+  Plus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   ShieldX,
+  Trash2,
   Truck,
   Warehouse,
+  X,
 } from "lucide-react"
 import Alert from "../../components/Alert"
+import Pagination from "../../components/ui/Pagination"
+import { usePagination } from "../../hooks/usePagination"
+import { useClickOutside } from "../../hooks/useClickOutside"
 import { api, getApiError } from "../../lib/api"
 
 const statusLabels = {
@@ -39,15 +47,15 @@ const billingLabels = {
 
 const moduleConfig = {
   preAdvice: {
-    badge: "Pre-advice Module",
-    title: "Pre-Advice Pending Approval",
+    badge: "Pre-Advice Verification",
+    title: "Booking Pre-Advice Verification",
     description:
-      "Review pending pre-advice approvals, check available yard capacity, and assign the container to one yard area before approval.",
+      "Every client booking automatically enters this queue as pre-advice. Verify the booking details, check yard capacity, and assign a yard area before approval.",
     icon: ClipboardList,
     defaultStatus: "pending_admin_approval",
     defaultBillingStatus: "all",
     primarySection: "approval",
-    queueTitle: "Pre-Advice Pending for Approval",
+    queueTitle: "Bookings Pending Pre-Advice Verification",
   },
   gateIn: {
     badge: "Gate-In Module",
@@ -125,16 +133,20 @@ const AdminBookingModule = ({ mode }) => {
   const yardBasePath = isPreAdviceApprovalMode ? "/admin/pre-advice-bookings/yard" : "/admin/yard"
 
   const [bookings, setBookings] = useState([])
+  const [summary, setSummary] = useState({})
   const [areas, setAreas] = useState([])
   const [blocks, setBlocks] = useState([])
   const [slotAvailability, setSlotAvailability] = useState([])
   const [selectedId, setSelectedId] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const filterRef = useRef(null)
   const [filters, setFilters] = useState({ status: config.defaultStatus, billingStatus: config.defaultBillingStatus, search: "" })
   const [approval, setApproval] = useState({ areaId: "", blockId: "", bay: 1, row: 1, tier: 1 })
   const [gateIn, setGateIn] = useState(initialGateIn)
   const [operationForm, setOperationForm] = useState({ serviceType: "container_yard" })
   const [rejectReason, setRejectReason] = useState("")
   const [paymentRejectReason, setPaymentRejectReason] = useState("")
+  const [additionalCharge, setAdditionalCharge] = useState({ description: "", quantity: "1", rateAmount: "", notes: "" })
   const [remarks, setRemarks] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -181,13 +193,14 @@ const AdminBookingModule = ({ mode }) => {
     const request = (async () => {
       try {
         setLoading(true)
-        const { data } = await api.get(requestKey)
-        setBookings(data.bookings || [])
-        if (data.bookings?.length) {
-          setSelectedId((current) => current && data.bookings.some((booking) => booking.id === current) ? current : data.bookings[0].id)
-        } else {
-          setSelectedId("")
-        }
+        const [{ data }, summaryResponse] = await Promise.all([
+          api.get(requestKey),
+          api.get("/admin/bookings/summary").catch(() => ({ data: { summary: {} } })),
+        ])
+        const nextBookings = data.bookings || []
+        setBookings(nextBookings)
+        setSummary(summaryResponse.data.summary || {})
+        setSelectedId((current) => current && nextBookings.some((booking) => booking.id === current) ? current : "")
       } catch (error) {
         setAlert({ type: "error", message: getApiError(error) })
       } finally {
@@ -340,7 +353,7 @@ const AdminBookingModule = ({ mode }) => {
 
   const shouldRefreshForRealtimeEvent = useCallback((eventType) => {
     if (!eventType) return false
-    if (isPreAdviceApprovalMode) return eventType.startsWith("preAdvice:") || eventType.startsWith("yard:")
+    if (isPreAdviceApprovalMode) return eventType.startsWith("booking:") || eventType.startsWith("preAdvice:") || eventType.startsWith("yard:")
     if (config.primarySection === "gateIn") return eventType.startsWith("gateIn:") || eventType === "booking:gate_in_approved" || eventType === "booking:approved" || eventType === "booking:rejected"
     if (config.primarySection === "billing") return eventType.includes("payment_") || eventType === "booking:billing_operation_updated" || eventType === "booking:gate_out_requested"
     if (config.primarySection === "gateOut") return eventType.includes("gate_out") || eventType === "booking:completed" || eventType === "booking:payment_approved"
@@ -376,8 +389,10 @@ const AdminBookingModule = ({ mode }) => {
       await callback()
       setAlert({ type: "success", message })
       await loadBookings({ force: true })
+      return true
     } catch (error) {
       setAlert({ type: "error", message: getApiError(error) })
+      return false
     } finally {
       setSaving(false)
     }
@@ -427,6 +442,24 @@ const AdminBookingModule = ({ mode }) => {
     "Payment approved. You can still view it by choosing Approved Payments / Paid Approved in this module."
   )
 
+  const addAdditionalCharge = () => {
+    if (!additionalCharge.description.trim() || Number(additionalCharge.rateAmount) <= 0) {
+      setAlert({ type: "error", message: "Enter an additional charge description and a rate greater than zero." })
+      return
+    }
+    return runAction(
+      () => api.post(`/admin/bookings/${selectedBooking.id}/additional-charges`, additionalCharge),
+      "Additional billing charge added."
+    ).then((success) => {
+      if (success) setAdditionalCharge({ description: "", quantity: "1", rateAmount: "", notes: "" })
+    })
+  }
+
+  const removeAdditionalCharge = (chargeId) => runAction(
+    () => api.delete(`/admin/bookings/${selectedBooking.id}/additional-charges/${chargeId}`),
+    "Additional billing charge removed."
+  )
+
   const rejectPayment = () => runAction(
     () => api.patch(`/admin/bookings/${selectedBooking.id}/payment/reject`, { reason: paymentRejectReason }),
     "Payment rejected."
@@ -442,38 +475,154 @@ const AdminBookingModule = ({ mode }) => {
     "Container released and booking completed."
   )
 
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters)
+
+  const pagination = usePagination(
+    bookings,
+    10,
+    `${mode}|${filters.status}|${filters.billingStatus}|${filters.search}`,
+  )
+
+  const moduleStats = useMemo(() => {
+    if (mode === "preAdvice") {
+      return [
+        { label: "Total Bookings", value: summary.total || 0, icon: ClipboardList, tone: "slate" },
+        { label: "Pending Review", value: summary.pending || 0, icon: ClipboardCheck, tone: "amber" },
+        { label: "Approved", value: summary.approved || 0, icon: CheckCircle2, tone: "blue" },
+      ]
+    }
+
+    if (mode === "gateIn") {
+      return [
+        { label: "Ready for Gate-In", value: summary.approved || 0, icon: Truck, tone: "amber" },
+        { label: "Gate-In Approved", value: summary.gateIn || 0, icon: ClipboardCheck, tone: "blue" },
+        { label: "Stored", value: summary.stored || 0, icon: Warehouse, tone: "emerald" },
+      ]
+    }
+
+    if (mode === "billing") {
+      return [
+        { label: "Unpaid", value: summary.unpaid || 0, icon: Banknote, tone: "amber" },
+        { label: "Under Review", value: summary.paymentReview || 0, icon: CreditCard, tone: "blue" },
+        { label: "Paid / Approved", value: summary.paid || 0, icon: CheckCircle2, tone: "emerald" },
+      ]
+    }
+
+    return [
+      { label: "Gate-Out Requests", value: summary.gateOutRequested || 0, icon: PackageCheck, tone: "amber" },
+      { label: "Paid Containers", value: summary.paid || 0, icon: CreditCard, tone: "blue" },
+      { label: "Completed", value: summary.completed || 0, icon: CheckCircle2, tone: "emerald" },
+    ]
+  }, [mode, summary])
+
+  const toneClasses = {
+    slate: "border-slate-200 bg-slate-50 text-slate-700",
+    amber: "border-amber-100 bg-amber-50 text-amber-700",
+    blue: "border-blue-100 bg-blue-50 text-blue-700",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+  }
+
   const handleSearch = () => loadBookings({ force: true })
 
   return (
     <div className="space-y-6">
-      <div className="card p-6">
-        <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-orange-700">
-          <HeaderIcon size={14} /> {config.badge}
-        </div>
-        <h1 className="mt-3 text-3xl font-black text-slate-950">{config.title}</h1>
-        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">{config.description}</p>
-      </div>
-
-      <Alert type={alert.type}>{alert.message}</Alert>
-
-      <div className="card p-5">
-        <div className="grid gap-3 lg:grid-cols-[1fr_220px_220px_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-            <input className="input pl-10" placeholder="Search reference, container, shipping line" value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} />
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-emerald-700">
+              <HeaderIcon size={15} /> {config.badge}
+            </div>
+            <h1 className="mt-1 text-2xl font-black text-slate-950">{config.title}</h1>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-500">{config.description}</p>
           </div>
-          <select className="input" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-            <option value="all">All booking statuses</option>
-            {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <select className="input" value={filters.billingStatus} onChange={(event) => setFilters((current) => ({ ...current, billingStatus: event.target.value }))}>
-            <option value="all">All billing statuses</option>
-            {Object.entries(billingLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <button type="button" onClick={handleSearch} className="btn-secondary" disabled={loading}><RefreshCw size={16} /> Refresh</button>
+          <button type="button" onClick={handleSearch} className="btn-secondary shrink-0" disabled={loading}>
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
         </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {moduleStats.map((stat) => (
+            <div key={stat.label} className={`rounded-2xl border p-5 ${toneClasses[stat.tone]}`}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wide opacity-80">{stat.label}</div>
+                  <div className="mt-2 text-3xl font-black">{stat.value}</div>
+                </div>
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/80 shadow-sm">
+                  <stat.icon size={20} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4"><Alert type={alert.type}>{alert.message}</Alert></div>
+      </section>
+
+      <section className="card overflow-visible">
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h2 className="text-lg font-black text-slate-950">{config.queueTitle}</h2>
+            <p className="text-sm font-semibold text-slate-500">Search and filter records before opening the complete booking details.</p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input
+                className="input w-full !rounded-2xl !py-3 !pl-10 !pr-4 text-sm sm:w-[320px]"
+                placeholder="Search reference, container, client..."
+                value={filters.search}
+                onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+                onKeyDown={(event) => event.key === "Enter" && handleSearch()}
+              />
+            </div>
+
+            <div className="relative" ref={filterRef}>
+              <button
+                type="button"
+                onClick={() => setShowFilters((current) => !current)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 sm:w-auto"
+              >
+                <SlidersHorizontal size={18} /> Filters
+              </button>
+
+              {showFilters && (
+                <div className="absolute right-0 z-40 mt-2 w-[300px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <p className="text-sm font-black text-slate-950">Filter Records</p>
+                    <button
+                      type="button"
+                      className="text-xs font-black text-emerald-700"
+                      onClick={() => setFilters({ status: config.defaultStatus, billingStatus: config.defaultBillingStatus, search: filters.search })}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="mt-4 space-y-4">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Booking Status</span>
+                      <select className="input !py-3" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
+                        <option value="all">All booking statuses</option>
+                        {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Billing Status</span>
+                      <select className="input !py-3" value={filters.billingStatus} onChange={(event) => setFilters((current) => ({ ...current, billingStatus: event.target.value }))}>
+                        <option value="all">All billing statuses</option>
+                        {Object.entries(billingLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {config.primarySection === "billing" && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 p-4">
             {[
               ["payment_under_review", "Under Review"],
               ["paid_approved", "Approved Payments"],
@@ -484,57 +633,88 @@ const AdminBookingModule = ({ mode }) => {
                 key={value}
                 type="button"
                 onClick={() => setFilters((current) => ({ ...current, billingStatus: value }))}
-                className={`rounded-full px-4 py-2 text-xs font-black transition ${filters.billingStatus === value ? "bg-orange-600 text-white shadow-lg shadow-orange-950/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                className={`rounded-full px-4 py-2 text-xs font-black transition ${filters.billingStatus === value ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
               >
                 {label}
               </button>
             ))}
-            <div className="basis-full rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700">
-              After approval, the payment stays here under Approved Payments and is also visible inside Booking Module details, Inventory, Gate-Out, and the client booking details.
-            </div>
           </div>
         )}
-      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-        <div className="card overflow-hidden">
-          <div className="border-b border-slate-200 p-5">
-            <h2 className="text-lg font-black text-slate-950">{config.queueTitle}</h2>
-          </div>
-          <div className="max-h-[760px] overflow-y-auto p-3">
-            {bookings.length === 0 && !loading && <div className="p-5 text-sm font-semibold text-slate-500">No records found for this module.</div>}
-            {bookings.map((booking) => (
-              <button
-                key={booking.id}
-                type="button"
-                onClick={() => setSelectedId(booking.id)}
-                className={`mb-3 w-full rounded-3xl border p-4 text-left transition ${selectedBooking?.id === booking.id ? "border-orange-300 bg-orange-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-black uppercase text-slate-500">{booking.bookingReference}</div>
-                    <div className="mt-1 text-lg font-black text-slate-950">{booking.containerNumber}</div>
-                    <div className="mt-1 text-sm font-semibold text-slate-500">{booking.clientName}</div>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-black ${statusClass(booking.status)}`}>{statusLabels[booking.status] || booking.status}</span>
-                </div>
-                <div className="mt-3 text-xs font-bold text-slate-500">{booking.containerSize}ft • {booking.containerType?.replace("_", " ")} • {booking.shippingLine}</div>
-                <div className="mt-2 text-xs font-bold text-slate-500">Booking No.: {booking.bookingNumber || "Generated after approval"}</div>
-                <div className="mt-2 text-xs font-bold text-slate-500">Billing: {billingLabels[booking.billingStatus] || booking.billingStatus}</div>
-              </button>
-            ))}
-          </div>
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500">
+          Showing {bookings.length} records in this module
         </div>
 
-        {!selectedBooking ? (
-          <div className="card grid min-h-[520px] place-items-center p-8 text-center">
-            <div>
-              <Warehouse className="mx-auto text-slate-300" size={42} />
-              <div className="mt-3 text-xl font-black text-slate-700">Select a booking</div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1150px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Booking / Client</th>
+                <th className="px-4 py-3">Container</th>
+                <th className="px-4 py-3">Booking Status</th>
+                <th className="px-4 py-3">Billing</th>
+                <th className="px-4 py-3">Schedule / Location</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {pagination.paginatedItems.map((booking) => (
+                <tr key={booking.id} className="align-top hover:bg-slate-50/70">
+                  <td className="px-4 py-4">
+                    <p className="font-black text-emerald-700">{booking.bookingReference}</p>
+                    <p className="mt-1 font-bold text-slate-800">{booking.clientName || "Client"}</p>
+                    <p className="text-xs font-semibold text-slate-500">{booking.clientEmail || "-"}</p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p className="font-black text-slate-950">{booking.containerNumber}</p>
+                    <p className="mt-1 text-xs font-bold capitalize text-slate-500">{booking.containerSize}ft • {booking.containerType?.replaceAll("_", " ")}</p>
+                    <p className="text-xs text-slate-500">{booking.shippingLine || "-"}</p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusClass(booking.status)}`}>{statusLabels[booking.status] || booking.status}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p className="font-black text-slate-900">PHP {Number(booking.billingTotal || booking.paymentAmount || 0).toLocaleString()}</p>
+                    <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${statusClass(booking.billingStatus)}`}>{billingLabels[booking.billingStatus] || booking.billingStatus}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p className="font-bold text-slate-800">{formatDate(getBookingInDate(booking))}</p>
+                    <p className="mt-1 text-xs text-slate-500">{booking.assignedAreaName || "Yard area pending"} • {booking.assignedSlotNumber || "No slot"}</p>
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(booking.id)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white hover:bg-slate-800"
+                    >
+                      <Eye size={15} /> View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!loading && bookings.length === 0 && (
+                <tr><td colSpan="6" className="px-4 py-12 text-center font-bold text-slate-500">No records found for this module.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination {...pagination} />
+      </section>
+
+      {selectedBooking && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+            <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
+              <div>
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">{config.badge}</div>
+                <h2 className="mt-1 text-2xl font-black text-slate-950">{selectedBooking.containerNumber}</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-500">{selectedBooking.bookingReference} • {selectedBooking.clientName}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedId("")} className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200" aria-label="Close booking details">
+                <X size={18} />
+              </button>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
+            <div className="space-y-6 p-5">
             <div className="card p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -578,10 +758,39 @@ const AdminBookingModule = ({ mode }) => {
               </div>
             </div>
 
+            {isPreAdviceApprovalMode && (
+              <div className="card p-5">
+                <div className="flex items-center gap-2">
+                  <ClipboardCheck size={18} className="text-emerald-700" />
+                  <h3 className="text-lg font-black text-slate-950">Submitted Pre-Advice Documents</h3>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-slate-500">Review the files uploaded together with the client booking.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {(selectedBooking.documents || []).map((document, index) => (
+                    <a
+                      key={`${document.url}-${index}`}
+                      href={document.secureUrl || document.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <div className="text-sm font-black text-slate-900">{document.label || "Document"}</div>
+                      <div className="mt-1 truncate text-xs font-semibold text-slate-500">{document.fileName || `File ${index + 1}`}</div>
+                    </a>
+                  ))}
+                  {(selectedBooking.documents || []).length === 0 && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-700 sm:col-span-2">
+                      No pre-advice documents were uploaded with this booking.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {config.primarySection === "approval" && (
               <div className="card p-5">
                 <div className="flex items-center gap-2">
-                  <MapPinned size={18} className="text-orange-700" />
+                  <MapPinned size={18} className="text-emerald-700" />
                   <h3 className="text-lg font-black text-slate-950">{isPreAdviceApprovalMode ? "Approve Pre-Advice and Assign Yard Location" : "Approve Booking and Assign Yard Location"}</h3>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -647,7 +856,7 @@ const AdminBookingModule = ({ mode }) => {
                 </div>
                 {selectedBlock && (
                   <div className="mt-4 space-y-3">
-                    <div className="rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-800">
+                    <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
                       {isPreAdviceApprovalMode ? `${selectedBlock.areaName || selectedBlock.name || "Yard Area"}` : (selectedBlock.name || selectedBlock.code || "Selected block")}: {selectedBlock.occupiedSlots}/{selectedBlock.capacityTeu} TEU used, {selectedBlock.availableSlots} TEU remaining. Selected location: B{approval.bay}-R{approval.row}-T{approval.tier}.
                     </div>
                     {selectedSlotTaken ? (
@@ -688,7 +897,7 @@ const AdminBookingModule = ({ mode }) => {
             {config.primarySection === "gateIn" && (
               <div className="card p-5">
                 <div className="flex items-center gap-2">
-                  <ClipboardCheck size={18} className="text-orange-700" />
+                  <ClipboardCheck size={18} className="text-emerald-700" />
                   <h3 className="text-lg font-black text-slate-950">Gate-In Check and Inspection</h3>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -724,7 +933,7 @@ const AdminBookingModule = ({ mode }) => {
             {config.primarySection === "billing" && (
               <div className="card p-5">
                 <div className="flex items-center gap-2">
-                  <CreditCard size={18} className="text-orange-700" />
+                  <CreditCard size={18} className="text-emerald-700" />
                   <h3 className="text-lg font-black text-slate-950">Payment Verification</h3>
                 </div>
                 <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm">
@@ -733,6 +942,10 @@ const AdminBookingModule = ({ mode }) => {
                   <div><span className="font-black text-slate-500">System Ref.:</span> {selectedBooking.paymentReferenceNumber || "Auto-generated on submit"}</div>
                   <div><span className="font-black text-slate-500">Computed:</span> {formatDate(selectedBooking.billingComputedAt)} • {selectedBooking.billingDays || 0} billing day(s)</div>
                   <div><span className="font-black text-slate-500">Submitted:</span> {formatDate(selectedBooking.paymentSubmittedAt)}</div>
+                  <div><span className="font-black text-slate-500">Payment Type:</span> {selectedBooking.paymentTypeSnapshot?.name || "Not selected"}</div>
+                  {selectedBooking.paymentTypeSnapshot?.accountNumber && (
+                    <div><span className="font-black text-slate-500">Paid To:</span> {selectedBooking.paymentTypeSnapshot.bankName || selectedBooking.paymentTypeSnapshot.name} • {selectedBooking.paymentTypeSnapshot.accountNumber} • {selectedBooking.paymentTypeSnapshot.accountName}</div>
+                  )}
                   {(selectedBooking.billingLineItems || []).length > 0 && (
                     <div className="mt-3 space-y-2">
                       {(selectedBooking.billingLineItems || []).map((item, index) => (
@@ -745,12 +958,37 @@ const AdminBookingModule = ({ mode }) => {
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {(selectedBooking.paymentProofs || []).map((doc, index) => (
-                      <a key={`${doc.url}-${index}`} className="rounded-full bg-white px-3 py-1 text-xs font-black text-orange-700 underline" href={doc.secureUrl || doc.url} target="_blank" rel="noreferrer">
+                      <a key={`${doc.url}-${index}`} className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 underline" href={doc.secureUrl || doc.url} target="_blank" rel="noreferrer">
                         {doc.label || "Payment Proof"} {index + 1}
                       </a>
                     ))}
                   </div>
                 </div>
+
+                <div className="mt-5 rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Additional Billing</p><p className="mt-1 text-sm font-semibold text-slate-600">Add one-time charges before payment is submitted.</p></div>
+                    <Plus size={18} className="text-emerald-700" />
+                  </div>
+                  {(selectedBooking.additionalBillingCharges || []).length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {(selectedBooking.additionalBillingCharges || []).map((charge) => (
+                        <div key={charge.id} className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 text-sm shadow-sm">
+                          <div><p className="font-black text-slate-900">{charge.description}</p><p className="text-xs text-slate-500">{charge.quantity} x PHP {Number(charge.rateAmount || 0).toLocaleString()} = PHP {Number(charge.amount || 0).toLocaleString()}</p></div>
+                          <button type="button" onClick={() => removeAdditionalCharge(charge.id)} disabled={saving || !["unpaid", "payment_rejected"].includes(selectedBooking.billingStatus)} className="grid h-9 w-9 place-items-center rounded-xl bg-red-50 text-red-700 disabled:opacity-40" aria-label="Remove additional charge"><Trash2 size={15} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_100px_150px_auto]">
+                    <input className="input bg-white" placeholder="Charge description" value={additionalCharge.description} onChange={(event) => setAdditionalCharge((current) => ({ ...current, description: event.target.value }))} disabled={!["unpaid", "payment_rejected"].includes(selectedBooking.billingStatus)} />
+                    <input className="input bg-white" type="number" min="0.01" step="0.01" placeholder="Qty" value={additionalCharge.quantity} onChange={(event) => setAdditionalCharge((current) => ({ ...current, quantity: event.target.value }))} disabled={!["unpaid", "payment_rejected"].includes(selectedBooking.billingStatus)} />
+                    <input className="input bg-white" type="number" min="0.01" step="0.01" placeholder="Rate" value={additionalCharge.rateAmount} onChange={(event) => setAdditionalCharge((current) => ({ ...current, rateAmount: event.target.value }))} disabled={!["unpaid", "payment_rejected"].includes(selectedBooking.billingStatus)} />
+                    <button type="button" onClick={addAdditionalCharge} className="btn-primary" disabled={saving || !["unpaid", "payment_rejected"].includes(selectedBooking.billingStatus)}><Plus size={16} /> Add</button>
+                  </div>
+                  <input className="input mt-3 bg-white" placeholder="Optional notes for this charge" value={additionalCharge.notes} onChange={(event) => setAdditionalCharge((current) => ({ ...current, notes: event.target.value }))} disabled={!['unpaid', 'payment_rejected'].includes(selectedBooking.billingStatus)} />
+                </div>
+
                 <textarea className="input mt-4 min-h-[82px]" placeholder="Remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} />
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                   <button type="button" onClick={approvePayment} className="btn-primary" disabled={saving || !["payment_submitted", "payment_under_review", "payment_rejected"].includes(selectedBooking.billingStatus)}>
@@ -767,7 +1005,7 @@ const AdminBookingModule = ({ mode }) => {
             {config.primarySection === "gateOut" && (
               <div className="card p-5">
                 <div className="flex items-center gap-2">
-                  <Truck size={18} className="text-orange-700" />
+                  <Truck size={18} className="text-emerald-700" />
                   <h3 className="text-lg font-black text-slate-950">Gate-Out Request</h3>
                 </div>
                 <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm">
@@ -787,9 +1025,10 @@ const AdminBookingModule = ({ mode }) => {
                 </div>
               </div>
             )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

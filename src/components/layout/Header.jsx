@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiMenu,
@@ -8,168 +8,228 @@ import {
   FiSettings,
   FiSearch,
   FiChevronDown,
+  FiCheck,
+  FiInbox,
 } from "react-icons/fi";
 import { useAuthStore } from "../../stores/authStore";
+import { useClickOutside } from "../../hooks/useClickOutside";
 
-const Header = ({ toggleSidebar, toggleMobileSidebar, sidebarOpen, connected = false, realtimeEvents = [] }) => {
+const notificationLabels = {
+  "client:registered": "New client registration",
+  "preAdvice:submitted": "New pre-advice submitted",
+  "booking:submitted": "New booking submitted",
+  "booking:resubmitted": "Booking resubmitted for review",
+  "booking:payment_submitted": "Payment proof submitted",
+  "booking:gate_out_requested": "Gate-out request submitted",
+};
+
+const getEventReference = (payload = {}) =>
+  payload.bookingReference ||
+  payload.preAdviceNumber ||
+  payload.containerNumber ||
+  payload.companyName ||
+  payload.clientName ||
+  payload.name ||
+  "";
+
+const Header = ({ toggleSidebar, toggleMobileSidebar, connected = false, realtimeEvents = [] }) => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
+  const [readIds, setReadIds] = useState([]);
+  const notificationRef = useRef(null);
+  const profileRef = useRef(null);
+
+  useClickOutside(
+    [notificationRef, profileRef],
+    () => setOpenMenu(null),
+    Boolean(openMenu),
+  );
 
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
   };
 
-  const notifications = realtimeEvents.slice(0, 12).map((event, index) => ({
-    id: `${event.type}-${event.time}-${index}`,
-    title: event.type.replaceAll(":", " ").replaceAll("_", " "),
-    time: new Date(event.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    read: false,
-  }));
+  const notifications = useMemo(
+    () =>
+      realtimeEvents
+        .filter((event) => notificationLabels[event.type])
+        .slice(0, 12)
+        .map((event) => {
+          const id = `${event.type}-${event.time}`;
+          const reference = getEventReference(event.payload);
+          return {
+            id,
+            title: notificationLabels[event.type],
+            detail: reference ? String(reference) : "Open the related module to review.",
+            time: new Date(event.time).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            read: readIds.includes(id),
+          };
+        }),
+    [readIds, realtimeEvents],
+  );
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  const toggleMenu = (menuName) => {
+    setOpenMenu((current) => (current === menuName ? null : menuName));
+  };
+
+  const markAllRead = () => {
+    setReadIds((current) => [
+      ...new Set([...current, ...notifications.map((notification) => notification.id)]),
+    ]);
+  };
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-      <div className="px-4 md:px-6 py-3">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+      <div className="px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
-          {/* Left Section */}
           <div className="flex items-center space-x-3">
-            {/* Mobile Menu Button */}
             <button
               onClick={toggleMobileSidebar}
-              className="lg:hidden p-2 rounded-md hover:bg-yard-fog transition-colors focus:outline-none focus:ring-2 focus:ring-yard-navy/30"
+              className="rounded-md p-2 transition-colors hover:bg-yard-fog focus:outline-none focus:ring-2 focus:ring-yard-navy/30 lg:hidden"
               aria-label="Toggle mobile menu"
             >
               <FiMenu className="h-6 w-6 text-slate-700" />
             </button>
 
-            {/* Desktop Sidebar Toggle */}
             <button
               onClick={toggleSidebar}
-              className="hidden lg:block p-2 rounded-md hover:bg-yard-fog transition-colors focus:outline-none focus:ring-2 focus:ring-yard-navy/30"
+              className="hidden rounded-md p-2 transition-colors hover:bg-yard-fog focus:outline-none focus:ring-2 focus:ring-yard-navy/30 lg:block"
               aria-label="Toggle sidebar"
             >
               <FiMenu className="h-5 w-5 text-slate-600" />
             </button>
 
-            {/* Search Bar */}
-            <div className="hidden md:flex items-center bg-yard-fog rounded-md px-3 py-2 border border-transparent focus-within:border-yard-navy/30 focus-within:bg-white transition-colors">
+            <div className="hidden items-center rounded-md border border-transparent bg-yard-fog px-3 py-2 transition-colors focus-within:border-yard-navy/30 focus-within:bg-white md:flex">
               <FiSearch className="h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search..."
-                className="bg-transparent border-none outline-none ml-2 text-sm text-slate-700 placeholder:text-slate-400 w-48 lg:w-64"
+                className="ml-2 w-48 border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 lg:w-64"
               />
             </div>
           </div>
 
-          {/* Right Section */}
           <div className="flex items-center space-x-1.5 md:space-x-2">
-            {/* Search - Mobile */}
-            <button className="md:hidden p-2 rounded-md hover:bg-yard-fog transition-colors">
+            <button className="rounded-md p-2 transition-colors hover:bg-yard-fog md:hidden" aria-label="Search">
               <FiSearch className="h-5 w-5 text-slate-600" />
             </button>
 
-            {/* Notifications */}
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
               <button
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className="p-2 rounded-md hover:bg-yard-fog transition-colors relative"
-                aria-expanded={isNotificationOpen}
+                onClick={() => toggleMenu("notifications")}
+                className="relative rounded-md p-2 transition-colors hover:bg-yard-fog"
+                aria-expanded={openMenu === "notifications"}
                 aria-label="Notifications"
               >
                 <FiBell className="h-5 w-5 text-slate-600" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 h-4 w-4 bg-red-600 text-white text-[10px] font-mono font-medium rounded-full flex items-center justify-center">
-                    {unreadCount}
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>
 
-              {isNotificationOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-slate-200 overflow-hidden z-50">
-                  <div className="p-3 border-b border-slate-200 flex items-center justify-between">
-                    <h3 className="font-display font-medium text-[13.5px] text-yard-navy">
-                      Notifications
-                    </h3>
-                    <button className="text-xs text-slate-500 hover:text-yard-navy transition-colors">
-                      Mark all read
-                    </button>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`p-3 hover:bg-yard-fog cursor-pointer transition-colors border-l-2 ${
-                          !notification.read
-                            ? "border-yard-orange bg-yard-fog/60"
-                            : "border-transparent"
-                        }`}
+              {openMenu === "notifications" && (
+                <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <div className="flex items-center justify-between border-b border-slate-200 p-4">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">Notifications</h3>
+                      <p className="mt-0.5 text-xs font-semibold text-slate-500">Only items that require admin attention are shown.</p>
+                    </div>
+                    {notifications.length > 0 && unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={markAllRead}
+                        className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700 hover:text-emerald-800"
                       >
-                        <p className="text-sm text-slate-800">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs font-mono text-slate-400 mt-1">
-                          {notification.time}
-                        </p>
-                      </div>
-                    ))}
+                        <FiCheck className="h-3.5 w-3.5" /> Mark read
+                      </button>
+                    )}
                   </div>
-                  <div className="p-2 border-t border-slate-200">
-                    <button className="w-full text-center text-xs text-slate-500 hover:text-yard-navy font-medium transition-colors">
-                      View all notifications
-                    </button>
+
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-5 py-10 text-center">
+                        <FiInbox className="mx-auto h-8 w-8 text-slate-300" />
+                        <p className="mt-3 text-sm font-black text-slate-700">No action-required notifications</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-400">Connection logs and setup changes are not displayed here.</p>
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <button
+                          type="button"
+                          key={notification.id}
+                          onClick={() =>
+                            setReadIds((current) =>
+                              current.includes(notification.id) ? current : [...current, notification.id],
+                            )
+                          }
+                          className={`block w-full border-b border-slate-100 p-4 text-left transition-colors last:border-b-0 hover:bg-slate-50 ${
+                            notification.read ? "bg-white" : "bg-emerald-50/60"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-1 h-2 w-2 flex-none rounded-full ${notification.read ? "bg-slate-300" : "bg-emerald-600"}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-black text-slate-900">{notification.title}</p>
+                              <p className="mt-1 truncate text-xs font-semibold text-slate-500">{notification.detail}</p>
+                              <p className="mt-1 text-[11px] font-semibold text-slate-400">{notification.time}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* User Profile */}
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center space-x-2 p-1.5 pr-2 rounded-md hover:bg-yard-fog transition-colors"
-                aria-expanded={isDropdownOpen}
+                onClick={() => toggleMenu("profile")}
+                className="flex items-center space-x-2 rounded-md p-1.5 pr-2 transition-colors hover:bg-yard-fog"
+                aria-expanded={openMenu === "profile"}
               >
-                <div className="h-8 w-8 rounded-full bg-yard-navy flex items-center justify-center flex-shrink-0">
-                  <FiUser className="h-4 w-4 " />
+                <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-yard-blue text-white">
+                  <FiUser className="h-4 w-4" />
+                  <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${connected ? "bg-emerald-500" : "bg-slate-400"}`} />
                 </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-display text-slate-800 leading-tight">
-                    {user?.name || "Admin User"}
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-400 leading-tight">
-                    {connected ? "Online" : user?.role?.replaceAll("_", " ") || "Administrator"}
+                <div className="hidden text-left md:block">
+                  <p className="text-sm font-display leading-tight text-slate-800">{user?.name || "Admin User"}</p>
+                  <p className="text-[11px] font-mono capitalize leading-tight text-slate-400">
+                    {user?.role?.replaceAll("_", " ") || "Administrator"}
                   </p>
                 </div>
-                <FiChevronDown className="hidden md:block h-4 w-4 text-slate-400" />
+                <FiChevronDown className={`hidden h-4 w-4 text-slate-400 transition-transform md:block ${openMenu === "profile" ? "rotate-180" : ""}`} />
               </button>
 
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-slate-200 overflow-hidden z-50">
-                  <div className="px-4 py-3 border-b border-slate-200">
-                    <p className="text-sm font-display text-slate-800">
-                      {user?.name || "Admin User"}
-                    </p>
-                    <p className="text-xs text-slate-500">{user?.email || ""}</p>
+              {openMenu === "profile" && (
+                <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <div className="border-b border-slate-200 px-4 py-3">
+                    <p className="text-sm font-black text-slate-800">{user?.name || "Admin User"}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{user?.email || ""}</p>
                   </div>
-                  <div className="py-1">
-                    <button className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-yard-fog hover:text-yard-navy flex items-center space-x-2 transition-colors">
+                  <div className="py-1.5">
+                    <button className="flex w-full items-center space-x-2 px-4 py-2.5 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-yard-fog hover:text-yard-navy">
                       <FiUser className="h-4 w-4" />
                       <span>Profile</span>
                     </button>
-                    <button className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-yard-fog hover:text-yard-navy flex items-center space-x-2 transition-colors">
+                    <button className="flex w-full items-center space-x-2 px-4 py-2.5 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-yard-fog hover:text-yard-navy">
                       <FiSettings className="h-4 w-4" />
                       <span>Settings</span>
                     </button>
-                    <div className="border-t border-slate-200 my-1"></div>
+                    <div className="my-1 border-t border-slate-200" />
                     <button
                       onClick={handleLogout}
-                      className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50 flex items-center space-x-2 transition-colors"
+                      className="flex w-full items-center space-x-2 px-4 py-2.5 text-left text-sm font-semibold text-red-700 transition-colors hover:bg-red-50"
                     >
                       <FiLogOut className="h-4 w-4" />
                       <span>Logout</span>

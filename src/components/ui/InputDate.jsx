@@ -48,7 +48,7 @@ const InputDate = ({
           focus:outline-none transition duration-200 cursor-pointer
           ${sizes[size]}
           ${error ? "border-red-500 focus:ring-2 focus:ring-red-500 focus:border-transparent" : ""}
-          ${!error ? "border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent" : ""}
+          ${!error ? "border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent" : ""}
           ${disabled ? "bg-gray-100 cursor-not-allowed opacity-60" : "bg-white"}
           ${error ? "pr-10" : "pl-10"}
         `}
@@ -102,6 +102,7 @@ const InputDate = ({
         open={isOpen}
         onCalendarOpen={() => setIsOpen(true)}
         onCalendarClose={() => setIsOpen(false)}
+        onClickOutside={() => setIsOpen(false)}
         shouldCloseOnSelect
         {...props}
       />

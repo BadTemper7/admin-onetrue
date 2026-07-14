@@ -28,19 +28,14 @@ import logo from "../../assets/logo.png";
 import { useAuthStore } from "../../stores/authStore";
 
 // Design tokens (also add these to tailwind.config.js — see chat for the snippet):
-//   yard-navy  #10192B   yard-orange #E8590C   yard-fog #F4F6F8   yard-slate #475569
+//   yard-navy  #10192B   yard-green #087A55   yard-fog #F4F6F8   yard-slate #475569
 // Fonts: font-display = Space Grotesk (nav labels), font-mono = IBM Plex Mono (codes/badges)
 
 const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
   const location = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState({
-    accounts: false,
-    operations: false,
-    yard: false,
-    billing: false,
-  });
+  const [expandedMenu, setExpandedMenu] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -70,8 +65,6 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
           path: "/accounts/user-management",
           icon: FiUsers,
         },
-        { name: "Client list", path: "/accounts/client-list", icon: FiUser },
-        { name: "User roles", path: "/accounts/user-roles", icon: FiShield },
       ],
     },
     {
@@ -115,7 +108,6 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
           path: "/yard/storage-monitoring",
           icon: FiActivity,
         },
-        { name: "Yard map", path: "/yard/map", icon: FiMapPin },
       ],
     },
     {
@@ -125,6 +117,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
       key: "billing",
       children: [
         { name: "Rate setup", path: "/billing/rate-setup", icon: FiSettings },
+        { name: "Payment types", path: "/billing/payment-types", icon: FiCreditCard },
         {
           name: "Payment verification",
           path: "/billing/payment-verification",
@@ -166,30 +159,23 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
     },
   ];
 
-  // Auto-expand whichever group contains the active route, so a deep-linked
-  // or refreshed page doesn't hide the active item inside a collapsed group.
+  // Keep the active route visible and use accordion behavior so only one
+  // sidebar group can be expanded at a time.
   useEffect(() => {
     const activeParent = menuItems.find((item) =>
       item.children?.some((child) => location.pathname.startsWith(child.path)),
     );
-    if (activeParent) {
-      setExpandedMenus((prev) =>
-        prev[activeParent.key] ? prev : { ...prev, [activeParent.key]: true },
-      );
-    }
+    setExpandedMenu(activeParent?.key || null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const toggleMenu = (menuName) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuName]: !prev[menuName],
-    }));
+    setExpandedMenu((current) => (current === menuName ? null : menuName));
   };
 
   const renderMenuItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedMenus[item.key];
+    const isExpanded = expandedMenu === item.key;
     const IconComponent = item.icon;
     const collapsedRail = !isOpen && !isMobileOpen;
     const isGroupActive =
@@ -209,7 +195,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
             ${collapsedRail ? "justify-center" : ""}
             ${
               isActive
-                ? "bg-white border-l-2 border-yard-orange text-yard-navy font-medium"
+                ? "bg-white border-l-2 border-yard-green text-yard-navy font-medium"
                 : "text-slate-600 hover:bg-white/70 hover:text-yard-navy"
             }
           `}
@@ -271,7 +257,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
                   flex items-center gap-2.5 pl-9 pr-3 py-1.5 rounded-r-md transition-colors duration-150
                   ${
                     isActive
-                      ? "bg-white border-l-2 border-yard-orange text-yard-navy font-medium"
+                      ? "bg-white border-l-2 border-yard-green text-yard-navy font-medium"
                       : "text-slate-500 hover:bg-white/70 hover:text-yard-navy border-l-2 border-transparent"
                   }
                 `}
@@ -297,7 +283,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
         `}
       >
         {/* Identity block */}
-        <div className="bg-yard-navy px-4 py-4 flex flex-col items-center flex-shrink-0">
+        <div className="border-b border-slate-200 bg-white px-4 py-4 flex flex-col items-center flex-shrink-0">
           <img
             src={logo}
             alt="Logo"
@@ -305,10 +291,10 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
           />
           {isOpen && (
             <div className="mt-2 text-center">
-              <div className="font-mono text-[10px] tracking-[0.15em] text-yard-orange">
+              <div className="font-mono text-[10px] tracking-[0.15em] text-yard-green">
                 OTLI
               </div>
-              <div className="text-[11px] text-slate-300">Yard operations</div>
+              <div className="text-[11px] font-medium text-slate-500">Yard operations</div>
             </div>
           )}
         </div>
@@ -348,22 +334,22 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleMobile, onClose }) => {
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <div className="bg-yard-navy px-4 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="border-b border-slate-200 bg-white px-4 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
             <div>
-              <div className="font-mono text-[10px] tracking-[0.15em] text-yard-orange">
+              <div className="font-mono text-[10px] tracking-[0.15em] text-yard-green">
                 OTLI
               </div>
-              <div className="text-[11px] text-slate-300">Yard operations</div>
+              <div className="text-[11px] font-medium text-slate-500">Yard operations</div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-white/10 transition-colors"
+            className="p-2 rounded-md text-slate-500 hover:bg-slate-100 transition-colors"
             aria-label="Close sidebar"
           >
-            <FiChevronRight className="h-5 w-5 text-slate-200" />
+            <FiChevronRight className="h-5 w-5" />
           </button>
         </div>
 

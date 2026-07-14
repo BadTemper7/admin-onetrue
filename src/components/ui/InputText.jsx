@@ -37,7 +37,7 @@ const InputText = ({
     ${sizes[size]}
     ${error ? "border-red-500 focus:ring-2 focus:ring-red-500 focus:border-transparent" : ""}
     ${success ? "border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent" : ""}
-    ${!error && !success ? "border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent" : ""}
+    ${!error && !success ? "border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent" : ""}
     ${disabled ? "bg-gray-100 cursor-not-allowed opacity-60" : "bg-white"}
     ${icon && iconPosition === "left" ? "pl-10" : ""}
     ${icon && iconPosition === "right" ? "pr-10" : ""}
@@ -59,7 +59,7 @@ const InputText = ({
         </label>
       )}
 
-      <div className="relative">
+      <div className="relative" data-field-control>
         {icon && iconPosition === "left" && (
           <div
             className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
@@ -96,7 +96,7 @@ const InputText = ({
           <button
             type="button"
             onClick={onTogglePassword}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            className={`absolute ${error ? "right-10" : "right-3"} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none`}
           >
             {type === "password" ? (
               <FiEye className="h-5 w-5" />

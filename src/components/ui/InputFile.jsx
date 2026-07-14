@@ -93,7 +93,7 @@ const InputFile = ({
         onClick={handleClick}
         className={`
           relative border-2 border-dashed rounded-lg 
-          hover:border-yard-orange transition-colors cursor-pointer
+          hover:border-yard-green transition-colors cursor-pointer
           ${sizes[size]}
           ${error ? "border-red-500 bg-red-50" : "border-gray-300"}
           ${disabled ? "opacity-60 cursor-not-allowed" : ""}

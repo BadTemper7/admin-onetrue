@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Eye,
   Search,
@@ -13,28 +13,22 @@ import Alert from "../../components/Alert"
 import { api, getApiError } from "../../lib/api"
 import Pagination from "../../components/ui/Pagination"
 import { usePagination } from "../../hooks/usePagination"
+import { useClickOutside } from "../../hooks/useClickOutside"
 
 const modules = [
   "dashboard",
   "userManagement",
-  "roleAccess",
   "clientVerification",
-  "accounts",
-  "clients",
   "preAdvice",
   "bookings",
-  "gateAppointment",
   "gateIn",
   "yardSetup",
   "inventory",
-  "yardMap",
   "storageMonitoring",
   "rateSetup",
-  "billing",
+  "paymentTypes",
   "paymentVerification",
   "gateOut",
-  "blacklist",
-  "chargeHold",
   "reports",
   "auditTrail",
   "settings",
@@ -85,6 +79,7 @@ const AdminAccounts = () => {
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+  const filterRef = useRef(null)
   const [selectedRoles, setSelectedRoles] = useState(roleOptions)
   const [selectedStatuses, setSelectedStatuses] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -95,6 +90,8 @@ const AdminAccounts = () => {
     [users],
   )
 
+
+  useClickOutside(filterRef, () => setShowFilters(false), showFilters);
   const totals = useMemo(
     () => ({
       accounts: users.length,
@@ -214,7 +211,7 @@ const AdminAccounts = () => {
       <div className="card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-black uppercase tracking-wide text-orange-700">
+            <div className="text-sm font-black uppercase tracking-wide text-emerald-700">
               Access Management
             </div>
             <h2 className="mt-1 text-2xl font-black text-slate-950">
@@ -263,15 +260,15 @@ const AdminAccounts = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-black uppercase tracking-wide text-orange-600">
+                <div className="text-xs font-black uppercase tracking-wide text-emerald-600">
                   Staff Accounts
                 </div>
-                <div className="mt-2 text-3xl font-black text-orange-700">{totals.staff}</div>
+                <div className="mt-2 text-3xl font-black text-emerald-700">{totals.staff}</div>
               </div>
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/80 text-orange-700">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/80 text-emerald-700">
                 <UserCog size={20} />
               </div>
             </div>
@@ -308,7 +305,7 @@ const AdminAccounts = () => {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => setShowFilters((current) => !current)}
@@ -329,7 +326,7 @@ const AdminAccounts = () => {
                     </div>
                     <button
                       type="button"
-                      className="text-xs font-black text-orange-700"
+                      className="text-xs font-black text-emerald-700"
                       onClick={resetFilters}
                     >
                       Reset
@@ -406,7 +403,7 @@ const AdminAccounts = () => {
                   </td>
                   <td className="px-4 py-4 font-semibold text-slate-600">{user.email}</td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
                       {roleLabel(user.role)}
                     </span>
                   </td>
@@ -446,7 +443,7 @@ const AdminAccounts = () => {
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
               <div>
-                <div className="text-sm font-black uppercase tracking-wide text-orange-700">Account Setup</div>
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Account Setup</div>
                 <h3 className="mt-1 text-2xl font-black text-slate-950">Create Admin Account</h3>
                 <p className="mt-1 text-sm font-semibold text-slate-500">Add the user information and access level.</p>
               </div>
@@ -575,10 +572,10 @@ const AdminAccounts = () => {
           <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
               <div>
-                <div className="text-sm font-black uppercase tracking-wide text-orange-700">Account Details</div>
+                <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Account Details</div>
                 <h3 className="mt-1 text-2xl font-black text-slate-950">{selectedUser.name}</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">{roleLabel(selectedUser.role)}</span>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{roleLabel(selectedUser.role)}</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-black capitalize ${statusClass(selectedUser.status)}`}>{selectedUser.status || "unknown"}</span>
                 </div>
               </div>

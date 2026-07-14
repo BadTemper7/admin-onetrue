@@ -3,8 +3,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        "yard-navy": "#10192B",
-        "yard-orange": "#E8590C",
+        "yard-navy": "#0F1D73",
+        "yard-green": "#087A55",
+        "yard-blue": "#0F1D73",
+        "yard-red": "#E30613",
         "yard-fog": "#F4F6F8",
       },
       fontFamily: {
