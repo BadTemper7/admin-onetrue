@@ -47,10 +47,15 @@ const daysInYard = (value) => {
   return Math.max(Math.floor(diff / (1000 * 60 * 60 * 24)), 0)
 }
 
-const getTeu = (size) => {
-  if (Number(size) === 40) return 2
-  if (Number(size) === 45) return 3
-  return 1
+const getCapacityUnit = (yardContainerSize) => Number(yardContainerSize) === 20 ? "TEU" : "FEU"
+
+const getYardCapacityUsage = (containerSize, yardContainerSize = 20) => {
+  const size = Number(containerSize) || 20
+  const yardSize = Number(yardContainerSize) || 20
+  if (yardSize === 20) {
+    return size === 40 ? 2 : 1
+  }
+  return size === 20 ? 0.5 : 1
 }
 
 const getBlockBounds = (block) => {
@@ -77,8 +82,8 @@ const getViewerBlockBounds = (block, selectedBlockId, area) => {
   if (!selectedBlockId) return getBlockBounds(block)
 
   const { bayCount, rowCount } = getSlotCounts(block, area)
-  const width = clamp(bayCount * 92 + 118, 460, 900)
-  const height = clamp(rowCount * 62 + 118, 420, 760)
+  const width = clamp(rowCount * 92 + 118, 460, 900)
+  const height = clamp(bayCount * 62 + 118, 420, 760)
 
   return {
     x: 0,
@@ -109,15 +114,15 @@ const getContainerBoxPosition = (container, block, area = {}, boundsOverride = n
   const bottomPadding = 44
   const usableWidth = Math.max(bounds.width - leftPadding - rightPadding, 80)
   const usableHeight = Math.max(bounds.height - topPadding - bottomPadding, 80)
-  const cellWidth = Math.max(usableWidth / bayCount, 20)
-  const cellHeight = Math.max(usableHeight / rowCount, 20)
+  const cellWidth = Math.max(usableWidth / rowCount, 20)
+  const cellHeight = Math.max(usableHeight / bayCount, 20)
   const boxWidth = clamp(cellWidth * 0.72, 22, 76)
   const boxHeight = clamp(cellHeight * 0.64, 18, 48)
   const stackStep = 26
 
   return {
-    left: leftPadding + (bay - 1) * cellWidth + (cellWidth - boxWidth) / 2,
-    top: topPadding + (row - 1) * cellHeight + (cellHeight - boxHeight) / 2,
+    left: leftPadding + (row - 1) * cellWidth + (cellWidth - boxWidth) / 2,
+    top: topPadding + (bay - 1) * cellHeight + (cellHeight - boxHeight) / 2,
     width: boxWidth,
     height: boxHeight,
     depth: clamp(cellHeight * 0.24, 8, 16),
@@ -129,7 +134,7 @@ const getContainerBoxPosition = (container, block, area = {}, boundsOverride = n
     bayCount,
     rowCount,
     tierCount,
-    label: `Bay ${bay} / Row ${row} / High ${tier}`,
+    label: `Bay ${bay} / Row ${row} / Tier ${tier}`,
   }
 }
 
@@ -174,7 +179,7 @@ const AreaList = ({ areas, selectedAreaId, onSelectArea, containers }) => {
         {areas.map((area) => {
           const areaContainers = containers.filter((container) => container.area === area.id)
           const total = numberValue(area.totalTeuSlots || area.capacityTeu, 0)
-          const used = areaContainers.reduce((sum, container) => sum + getTeu(container.containerSize), 0)
+          const used = areaContainers.reduce((sum, container) => sum + getYardCapacityUsage(container.containerSize, area.containerSize), 0)
           const usage = total ? clamp(Math.round((used / total) * 100), 0, 100) : 0
           const active = selectedAreaId === area.id
 
@@ -188,12 +193,12 @@ const AreaList = ({ areas, selectedAreaId, onSelectArea, containers }) => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xl font-black text-slate-950">{area.name}</div>
-                  <div className="mt-1 text-xs font-black uppercase tracking-wide text-slate-400">{area.containerSize}ft • {area.lineCount}L / {area.rowCount}R / {area.tierCount}H</div>
+                  <div className="mt-1 text-xs font-black uppercase tracking-wide text-slate-400">{area.containerSize}ft • {getSlotCounts({}, area).bayCount} Bay / {getSlotCounts({}, area).rowCount} Row / {getSlotCounts({}, area).tierCount} Tier</div>
                 </div>
                 <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-700 shadow-sm">{areaContainers.length} CNTR</span>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs font-black text-slate-500">
-                <span>{Math.round(used * 100) / 100} / {total} TEU</span>
+                <span>{Math.round(used * 100) / 100} / {total} {getCapacityUnit(area.containerSize)}</span>
                 <span>{usage}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -240,7 +245,7 @@ const BlockList = ({ selectedArea, blocks, selectedBlockId, onSelectBlock, conta
         {blocks.map((block) => {
           const blockContainers = containersByBlock[block.id] || []
           const total = numberValue(block.teuSlots || block.capacityTeu, 0)
-          const used = blockContainers.reduce((sum, container) => sum + getTeu(container.containerSize), 0)
+          const used = blockContainers.reduce((sum, container) => sum + getYardCapacityUsage(container.containerSize, block.containerSize || selectedArea?.containerSize), 0)
           const usage = total ? clamp(Math.round((used / total) * 100), 0, 100) : 0
           const active = selectedBlockId === block.id
 
@@ -261,10 +266,10 @@ const BlockList = ({ selectedArea, blocks, selectedBlockId, onSelectBlock, conta
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-black text-slate-600">
                 <div className="rounded-xl bg-slate-50 p-2">{getSlotCounts(block, selectedArea).bayCount}<br /><span className="text-[10px] uppercase text-slate-400">Bay</span></div>
                 <div className="rounded-xl bg-slate-50 p-2">{getSlotCounts(block, selectedArea).rowCount}<br /><span className="text-[10px] uppercase text-slate-400">Row</span></div>
-                <div className="rounded-xl bg-slate-50 p-2">{getSlotCounts(block, selectedArea).tierCount}<br /><span className="text-[10px] uppercase text-slate-400">High</span></div>
+                <div className="rounded-xl bg-slate-50 p-2">{getSlotCounts(block, selectedArea).tierCount}<br /><span className="text-[10px] uppercase text-slate-400">Tier</span></div>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs font-black text-slate-500">
-                <span>{Math.round(used * 100) / 100} / {total} TEU</span>
+                <span>{Math.round(used * 100) / 100} / {total} {getCapacityUnit(block.containerSize || selectedArea?.containerSize)}</span>
                 <span>{usage}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -321,7 +326,7 @@ const Cube3D = ({ cube, assignedContainer, selected, onSelect }) => {
       type="button"
       className={className}
       onClick={filled ? onSelect : undefined}
-      aria-label={filled ? `${assignedContainer.containerNumber} at Bay ${cube.bay}, Row ${cube.row}, High ${cube.tier}` : `Empty slot Bay ${cube.bay}, Row ${cube.row}, High ${cube.tier}`}
+      aria-label={filled ? `${assignedContainer.containerNumber} at Bay ${cube.bay}, Row ${cube.row}, Tier ${cube.tier}` : `Empty slot Bay ${cube.bay}, Row ${cube.row}, Tier ${cube.tier}`}
       style={{
         width: cube.width,
         height: cube.height,
@@ -345,7 +350,7 @@ const AxisLabel = ({ children, style, className = "" }) => (
 )
 
 const BlockSlotMap = ({ selectedArea, block, containers }) => {
-  const { bayCount: lineCount, rowCount, tierCount } = getSlotCounts(block, selectedArea)
+  const { bayCount, rowCount, tierCount } = getSlotCounts(block, selectedArea)
   const [selectedContainerId, setSelectedContainerId] = useState("")
   const [rotation, setRotation] = useState(-38)
   const [tilt, setTilt] = useState(58)
@@ -378,24 +383,23 @@ const BlockSlotMap = ({ selectedArea, block, containers }) => {
   const cubeD = 52
   const gap = 1.5
   const sceneWidth = rowCount * (cubeW + gap)
-  const sceneDepth = lineCount * (cubeD + gap)
-  const sceneHeight = tierCount * (cubeH + gap)
-  const viewportHeight = clamp(420 + tierCount * 24 + lineCount * 12, 540, 760)
+  const sceneDepth = tierCount * (cubeD + gap)
+  const sceneHeight = bayCount * (cubeH + gap)
+  const viewportHeight = clamp(420 + bayCount * 24 + tierCount * 12, 540, 760)
 
   const cubes = []
-  for (let tier = 1; tier <= tierCount; tier += 1) {
-    for (let line = lineCount; line >= 1; line -= 1) {
+  for (let bay = 1; bay <= bayCount; bay += 1) {
+    for (let tier = tierCount; tier >= 1; tier -= 1) {
       for (let row = 1; row <= rowCount; row += 1) {
-        const key = `${line}-${row}-${tier}`
+        const key = `${bay}-${row}-${tier}`
         cubes.push({
           key,
-          line,
           row,
-          bay: line,
+          bay,
           tier,
           x: (row - 1) * (cubeW + gap),
-          y: -(tier - 1) * (cubeH + gap),
-          z: (line - 1) * (cubeD + gap),
+          y: -(bay - 1) * (cubeH + gap),
+          z: (tier - 1) * (cubeD + gap),
           width: cubeW,
           height: cubeH,
           depth: cubeD,
@@ -436,7 +440,7 @@ const BlockSlotMap = ({ selectedArea, block, containers }) => {
   }
 
   const selectedCoordinateLabel = selectedContainer
-    ? `${selectedArea?.name || "Area"} - Line ${numberValue(selectedContainer.bay, 1)}, Row ${numberValue(selectedContainer.row, 1)}, High ${numberValue(selectedContainer.tier, 1)}`
+    ? `${selectedArea?.name || "Area"} - Bay ${numberValue(selectedContainer.bay, 1)}, Row ${numberValue(selectedContainer.row, 1)}, Tier ${numberValue(selectedContainer.tier, 1)}`
     : "No assigned container selected"
 
   return (
@@ -445,7 +449,7 @@ const BlockSlotMap = ({ selectedArea, block, containers }) => {
         <div>
           <h3 className="text-lg font-black uppercase tracking-wide text-slate-950">{block.code || block.name} Block - 3D Slot Map</h3>
           <p className="mt-1 text-sm font-semibold text-slate-500">
-            Rows: {rowCount} • Lines: {lineCount} • High: {tierCount}
+            Bays: {bayCount} • Rows: {rowCount} • Tiers: {tierCount}
           </p>
           <p className="mt-1 text-xs font-bold text-slate-400">This is a true CSS 3D stack. Drag left/right to rotate the whole block. Drag up/down to change the camera angle.</p>
         </div>
@@ -495,9 +499,9 @@ const BlockSlotMap = ({ selectedArea, block, containers }) => {
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
-          <div className="yard-3d-helper yard-3d-helper-high">HIGH</div>
+          <div className="yard-3d-helper yard-3d-helper-bay">TIER (VERTICAL)</div>
           <div className="yard-3d-helper yard-3d-helper-row">ROW (HORIZONTAL)</div>
-          <div className="yard-3d-helper yard-3d-helper-line">LINE (DEPTH)</div>
+          <div className="yard-3d-helper yard-3d-helper-tier">BAY (FRONT TO BACK)</div>
 
           <div
             className="yard-3d-scene"
@@ -530,28 +534,28 @@ const BlockSlotMap = ({ selectedArea, block, containers }) => {
               )
             })}
 
-            {Array.from({ length: lineCount }, (_, index) => {
-              const line = index + 1
+            {Array.from({ length: tierCount }, (_, index) => {
+              const tierNumber = index + 1
               return (
                 <AxisLabel
-                  key={`line-label-${line}`}
-                  className="yard-axis-line"
-                  style={{ transform: `translate3d(${sceneWidth + 18}px, ${cubeH + 4}px, ${(line - 0.5) * (cubeD + gap)}px) rotateZ(${-rotation}deg) rotateX(${-tilt}deg)` }}
+                  key={`tier-label-${tierNumber}`}
+                  className="yard-axis-tier"
+                  style={{ transform: `translate3d(-38px, ${cubeH + 4}px, ${(tierNumber - 0.5) * (cubeD + gap)}px) rotateZ(${-rotation}deg) rotateX(${-tilt}deg)` }}
                 >
-                  {line}
+                  {tierNumber}
                 </AxisLabel>
               )
             })}
 
-            {Array.from({ length: tierCount }, (_, index) => {
-              const tier = index + 1
+            {Array.from({ length: bayCount }, (_, index) => {
+              const bayNumber = index + 1
               return (
                 <AxisLabel
-                  key={`tier-label-${tier}`}
-                  className="yard-axis-tier"
-                  style={{ transform: `translate3d(-38px, ${-(tier - 1) * (cubeH + gap) + 8}px, -24px) rotateZ(${-rotation}deg) rotateX(${-tilt}deg)` }}
+                  key={`bay-label-${bayNumber}`}
+                  className="yard-axis-bay"
+                  style={{ transform: `translate3d(${sceneWidth + 18}px, ${-(bayNumber - 1) * (cubeH + gap) + 8}px, -24px) rotateZ(${-rotation}deg) rotateX(${-tilt}deg)` }}
                 >
-                  {tier}
+                  {bayNumber}
                 </AxisLabel>
               )
             })}
@@ -613,16 +617,16 @@ const Storage3DViewer = ({ selectedArea, selectedBlockId, blocks, containers }) 
   const visibleBlocks = selectedBlockId ? blocks.filter((block) => block.id === selectedBlockId) : blocks
   const focusedBlock = selectedBlockId ? visibleBlocks[0] : visibleBlocks.length === 1 ? visibleBlocks[0] : null
   const blockContainers = focusedBlock ? containers.filter((container) => container.block === focusedBlock.id) : []
-  const { bayCount: lineCount, rowCount, tierCount } = getSlotCounts(focusedBlock || {}, selectedArea || {})
+  const { bayCount, rowCount, tierCount } = getSlotCounts(focusedBlock || {}, selectedArea || {})
 
   return (
     <div className="card overflow-hidden">
       <div className="border-b border-slate-200 bg-slate-50/60 p-5">
         <div className="grid gap-4 md:grid-cols-4">
           <SlotSummaryCard label="Block" value={focusedBlock?.code || selectedArea?.name || "-"} sublabel={focusedBlock?.name || "Selected yard block"} icon={Boxes} />
+          <SlotSummaryCard label="Bays" value={focusedBlock ? bayCount : "-"} icon={Layers3} />
           <SlotSummaryCard label="Rows" value={focusedBlock ? rowCount : "-"} icon={Layers3} />
-          <SlotSummaryCard label="Lines" value={focusedBlock ? lineCount : "-"} icon={Layers3} />
-          <SlotSummaryCard label="High" value={focusedBlock ? tierCount : "-"} icon={Layers3} />
+          <SlotSummaryCard label="Tiers" value={focusedBlock ? tierCount : "-"} icon={Layers3} />
         </div>
       </div>
 
@@ -652,7 +656,7 @@ const Storage3DViewer = ({ selectedArea, selectedBlockId, blocks, containers }) 
             <div>
               <Layers3 className="mx-auto text-slate-300" size={46} />
               <div className="mt-3 text-xl font-black text-slate-800">Select a block</div>
-              <div className="mt-1 max-w-xl text-sm font-semibold text-slate-500">Choose a block from the block list above to display the exact Row, Line, and High slot map.</div>
+              <div className="mt-1 max-w-xl text-sm font-semibold text-slate-500">Choose a block from the block list above to display the exact Bay, Row, and Tier slot map.</div>
             </div>
           </div>
         )}
@@ -705,7 +709,24 @@ const AdminStorageMonitoring = () => {
     `${selectedAreaId}|${selectedBlockId}|${search}`,
   )
 
-  const totalTeu = useMemo(() => selectedAreaContainers.reduce((sum, container) => sum + getTeu(container.containerSize), 0), [selectedAreaContainers])
+  const usedCapacity = useMemo(() => {
+    if (selectedArea) {
+      const unit = getCapacityUnit(selectedArea.containerSize)
+      const value = selectedAreaContainers.reduce(
+        (sum, container) => sum + getYardCapacityUsage(container.containerSize, selectedArea.containerSize),
+        0,
+      )
+
+      return { label: `Used ${unit}`, value }
+    }
+
+    const value = selectedAreaContainers.reduce(
+      (sum, container) => sum + getYardCapacityUsage(container.containerSize, 20),
+      0,
+    )
+
+    return { label: "Used TEU Equivalent", value }
+  }, [selectedArea, selectedAreaContainers])
 
   const loadAreas = async () => {
     const { data } = await api.get("/admin/inventory/areas")
@@ -783,7 +804,7 @@ const AdminStorageMonitoring = () => {
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           <StatCard label="Selected Area" value={selectedArea?.name || "All Areas"} icon={Warehouse} tone="slate" />
           <StatCard label="Stored Containers" value={selectedAreaContainers.length} icon={Boxes} tone="blue" />
-          <StatCard label="Used TEU" value={Math.round(totalTeu * 100) / 100} icon={CalendarClock} tone="emerald" />
+          <StatCard label={usedCapacity.label} value={Math.round(usedCapacity.value * 100) / 100} icon={CalendarClock} tone="emerald" />
         </div>
         <div className="mt-4"><Alert type={alert.type}>{alert.message}</Alert></div>
       </section>

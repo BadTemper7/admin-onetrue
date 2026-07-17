@@ -28,31 +28,33 @@ const emptyAreaForm = {
   capacityTeu: 1,
   status: "active",
   color: "#087A55",
-  sortOrder: 0,
   description: "",
 }
 
 const areaStatuses = ["active", "inactive", "maintenance"]
-const containerSizes = [20, 40, 45]
+const containerSizes = [20, 40]
 
 const numberValue = (value, fallback = 0) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-const getTeuFactor = (containerSize) => {
-  if (Number(containerSize) === 40) return 2
-  if (Number(containerSize) === 45) return 3
-  return 1
-}
+const getCapacityUnit = (containerSize) => Number(containerSize) === 20 ? "TEU" : "FEU"
 
 const calculateAreaCapacity = (form) => {
-  const lines = Math.max(numberValue(form.lineCount, 1), 1)
+  const bays = Math.max(numberValue(form.lineCount, 1), 1)
   const rows = Math.max(numberValue(form.rowCount, 1), 1)
-  const high = Math.max(numberValue(form.tierCount, 1), 1)
-  const capacity = lines * rows * high * getTeuFactor(form.containerSize)
+  const tiers = Math.max(numberValue(form.tierCount, 1), 1)
+  return Math.max(bays * rows * tiers, 1)
+}
 
-  return Math.max(Math.round(capacity * 100) / 100, 1)
+const normalizeDimensions = (form) => {
+  const rows = Math.max(numberValue(form.rowCount, 1), 1)
+  const tiers = Math.max(numberValue(form.tierCount, 1), 1)
+  const capacity = Math.max(numberValue(form.capacityTeu, 1), 1)
+  const minimumBays = Math.ceil(capacity / Math.max(rows * tiers, 1))
+  const bays = Math.max(numberValue(form.lineCount, 1), minimumBays)
+  return { bays, rows, tiers, capacity, boxCount: bays * rows * tiers }
 }
 
 const statusClass = (status) => {
@@ -74,8 +76,9 @@ const AdminYardAreas = () => {
   const [summary, setSummary] = useState({
     areaCount: 0,
     totalAreaCapacityTeu: 0,
+    totalAreaCapacityFeu: 0,
+    totalBoxes: 0,
     blockCount: 0,
-    totalTeuSlots: 0,
   })
   const [areas, setAreas] = useState([])
   const [areaForm, setAreaForm] = useState(emptyAreaForm)
@@ -124,8 +127,9 @@ const AdminYardAreas = () => {
       data.summary || {
         areaCount: 0,
         totalAreaCapacityTeu: 0,
+        totalAreaCapacityFeu: 0,
+        totalBoxes: 0,
         blockCount: 0,
-        totalTeuSlots: 0,
       },
     )
   }
@@ -158,8 +162,7 @@ const AdminYardAreas = () => {
       const next = { ...current, [name]: value }
 
       if (
-        ["lineCount", "rowCount", "tierCount", "containerSize"].includes(name) &&
-        !editingAreaId
+        ["lineCount", "rowCount", "tierCount"].includes(name)
       ) {
         next.capacityTeu = calculateAreaCapacity(next)
       }
@@ -190,14 +193,14 @@ const AdminYardAreas = () => {
     setSuccess("")
 
     try {
+      const dimensions = normalizeDimensions(areaForm)
       const payload = {
         ...areaForm,
-        lineCount: Math.max(numberValue(areaForm.lineCount, 1), 1),
-        rowCount: Math.max(numberValue(areaForm.rowCount, 1), 1),
-        tierCount: Math.max(numberValue(areaForm.tierCount, 1), 1),
+        lineCount: dimensions.bays,
+        rowCount: dimensions.rows,
+        tierCount: dimensions.tiers,
         containerSize: numberValue(areaForm.containerSize, 20),
-        capacityTeu: Math.max(numberValue(areaForm.capacityTeu, autoCapacity), 1),
-        sortOrder: numberValue(areaForm.sortOrder, 0),
+        capacityTeu: dimensions.capacity,
       }
 
       if (editingAreaId) {
@@ -229,7 +232,6 @@ const AdminYardAreas = () => {
       capacityTeu: area.capacityTeu || 1,
       status: area.status || "active",
       color: area.color || "#087A55",
-      sortOrder: area.sortOrder || 0,
       description: area.description || "",
     })
     setShowAreaModal(true)
@@ -263,9 +265,9 @@ const AdminYardAreas = () => {
 
   const stats = [
     { label: "Total Areas", value: summary.areaCount || 0, icon: MapPinned, tone: "slate" },
-    { label: "Area Capacity", value: `${summary.totalAreaCapacityTeu || 0} TEU`, icon: Warehouse, tone: "blue" },
-    { label: "Inventory Blocks", value: summary.blockCount || 0, icon: Layers3, tone: "orange" },
-    { label: "Block Capacity", value: `${summary.totalTeuSlots || 0} TEU`, icon: Ruler, tone: "amber" },
+    { label: "20 FT Capacity", value: `${summary.totalAreaCapacityTeu || 0} TEU`, icon: Warehouse, tone: "blue" },
+    { label: "40 FT Capacity", value: `${summary.totalAreaCapacityFeu || 0} FEU`, icon: Layers3, tone: "orange" },
+    { label: "Physical Boxes", value: summary.totalBoxes || 0, icon: Ruler, tone: "amber" },
   ]
 
   return (
@@ -407,10 +409,10 @@ const AdminYardAreas = () => {
                     </div>
                   </td>
                   <td className="px-4 py-4 font-semibold text-slate-600">
-                    {area.lineCount} line × {area.rowCount} row × {area.tierCount} high
+                    {area.lineCount} bay × {area.rowCount} row × {area.tierCount} tier
                   </td>
                   <td className="px-4 py-4 font-semibold text-slate-600">{area.containerSize} FT</td>
-                  <td className="px-4 py-4 font-black text-slate-950">{area.capacityTeu} TEU</td>
+                  <td className="px-4 py-4 font-black text-slate-950">{area.capacityTeu} {area.capacityUnit || getCapacityUnit(area.containerSize)}</td>
                   <td className="px-4 py-4 font-semibold text-slate-600">{area.blockCount || 0}</td>
                   <td className="px-4 py-4">
                     <span className={`rounded-full px-3 py-1 text-xs font-black capitalize ${statusClass(area.status)}`}>{area.status}</span>
@@ -457,13 +459,13 @@ const AdminYardAreas = () => {
               </Field>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Line">
+                <Field label="Bay">
                   <input className="input" name="lineCount" type="number" min="1" value={areaForm.lineCount} onChange={handleChange} required />
                 </Field>
-                <Field label="Rows">
+                <Field label="Row">
                   <input className="input" name="rowCount" type="number" min="1" value={areaForm.rowCount} onChange={handleChange} required />
                 </Field>
-                <Field label="High">
+                <Field label="Tier">
                   <input className="input" name="tierCount" type="number" min="1" value={areaForm.tierCount} onChange={handleChange} required />
                 </Field>
               </div>
@@ -474,12 +476,12 @@ const AdminYardAreas = () => {
                     {containerSizes.map((size) => <option key={size} value={size}>{size} FT</option>)}
                   </select>
                 </Field>
-                <Field label="Capacity (TEU)" hint={`Auto estimate: ${autoCapacity} TEU`}>
+                <Field label={`Capacity (${getCapacityUnit(areaForm.containerSize)})`} hint={`Physical boxes: ${autoCapacity}. Bay automatically increases when capacity is higher than the box count.`}>
                   <input className="input" name="capacityTeu" type="number" min="1" step="0.01" value={areaForm.capacityTeu} onChange={handleChange} required />
                 </Field>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Status">
                   <select className="input" name="status" value={areaForm.status} onChange={handleChange}>
                     {areaStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
@@ -487,9 +489,6 @@ const AdminYardAreas = () => {
                 </Field>
                 <Field label="Color">
                   <input className="input h-[46px]" name="color" type="color" value={areaForm.color} onChange={handleChange} />
-                </Field>
-                <Field label="Sort Order">
-                  <input className="input" name="sortOrder" type="number" value={areaForm.sortOrder} onChange={handleChange} />
                 </Field>
               </div>
 
@@ -534,11 +533,11 @@ const AdminYardAreas = () => {
             </div>
 
             <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Detail label="Dimensions" value={`${selectedArea.lineCount} line × ${selectedArea.rowCount} row × ${selectedArea.tierCount} high`} />
+              <Detail label="Dimensions" value={`${selectedArea.lineCount} bay × ${selectedArea.rowCount} row × ${selectedArea.tierCount} tier`} />
               <Detail label="Container Size" value={`${selectedArea.containerSize} FT`} />
-              <Detail label="Capacity" value={`${selectedArea.capacityTeu} TEU`} />
+              <Detail label="Capacity" value={`${selectedArea.capacityTeu} ${selectedArea.capacityUnit || getCapacityUnit(selectedArea.containerSize)}`} />
+              <Detail label="Physical Boxes" value={selectedArea.boxCount || calculateAreaCapacity(selectedArea)} />
               <Detail label="Inventory Blocks" value={selectedArea.blockCount || 0} />
-              <Detail label="Sort Order" value={selectedArea.sortOrder ?? 0} />
               <Detail label="Status" value={selectedArea.status} />
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2 lg:col-span-3">
                 <div className="text-xs font-black uppercase tracking-wide text-slate-400">Notes</div>

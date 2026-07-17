@@ -18,6 +18,7 @@ import AdminRateSetup from "./pages/modules/AdminRateSetup"
 import AdminPaymentTypes from "./pages/modules/AdminPaymentTypes"
 import AdminBilling from "./pages/modules/AdminBilling"
 import AdminGateOut from "./pages/modules/AdminGateOut"
+import AdminReports from "./pages/modules/AdminReports"
 import PlaceholderPage from "./pages/modules/PlaceholderPage"
 
 const AdminShell = () => <Layout><Outlet /></Layout>
@@ -61,7 +62,7 @@ function App() {
             <Route path="billing/invoices" element={<Placeholder title="Invoices" moduleName="Billing" description="Review generated invoices and billing details for completed container operations." checklist={["Invoice list", "Client filter", "Payment status", "Export invoice"]} />} />
             <Route path="billing/payment-history" element={<Placeholder title="Payment History" moduleName="Billing" description="Review approved, rejected, and pending payment submissions." checklist={["Payment reference", "Booking reference", "Amount", "Review status"]} />} />
 
-            <Route path="reports/analytics" element={<Placeholder title="Analytics" moduleName="Reports" description="Generate operational and financial summaries for bookings, inventory, billing, and yard activity." checklist={["Date filter", "Status filter", "Charts", "Export report"]} />} />
+            <Route path="reports/analytics" element={<TitledPage title="Reports"><ProtectedModule moduleName="reports"><AdminReports /></ProtectedModule></TitledPage>} />
             <Route path="reports/audit-logs" element={<Placeholder title="Audit Logs" moduleName="Reports" description="Track important account, booking, yard, billing, and access changes." checklist={["User", "Module", "Action", "Timestamp"]} />} />
 
             <Route path="settings/general" element={<Placeholder title="General Settings" moduleName="Settings" description="Manage global application defaults and operational configuration." checklist={["Application labels", "Default statuses", "File rules", "Notification rules"]} />} />

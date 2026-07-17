@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Banknote,
   Building2,
   CreditCard,
   Pencil,
@@ -16,10 +17,10 @@ import Alert from "../../components/Alert"
 import Pagination from "../../components/ui/Pagination"
 import { useClickOutside } from "../../hooks/useClickOutside"
 import { usePagination } from "../../hooks/usePagination"
-import { api, getApiError } from "../../lib/api"
+import { api, getApiError, resolveFileUrl } from "../../lib/api"
 
 const initialForm = {
-  type: "bank",
+  type: "cash",
   name: "",
   bankName: "",
   accountNumber: "",
@@ -94,7 +95,7 @@ const AdminPaymentTypes = () => {
       accountName: item.accountName,
       instructions: item.instructions || "",
       status: item.status,
-      sortOrder: String(item.sortOrder || 100),
+      sortOrder: String(Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : 100),
       qr: null,
     })
     setModalOpen(true)
@@ -147,6 +148,7 @@ const AdminPaymentTypes = () => {
   }
 
   const activeCount = paymentTypes.filter((item) => item.status === "active").length
+  const cash = paymentTypes.filter((item) => item.type === "cash").length
   const banks = paymentTypes.filter((item) => item.type === "bank").length
   const wallets = paymentTypes.filter((item) => item.type === "ewallet").length
 
@@ -157,7 +159,7 @@ const AdminPaymentTypes = () => {
           <div>
             <div className="text-sm font-black uppercase tracking-wide text-emerald-700">Billing Management</div>
             <h2 className="mt-1 text-2xl font-black text-slate-950">Payment Types</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Set up bank and eWallet accounts clients can select when submitting payment. QR images remain optional.</p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Cash is available by default. You can also set up bank and eWallet accounts clients can select when submitting payment. QR images remain optional.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="button" onClick={loadPaymentTypes} className="btn-secondary shrink-0" disabled={loading}>
@@ -167,9 +169,12 @@ const AdminPaymentTypes = () => {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
             <div className="flex items-center justify-between"><div><div className="text-xs font-black uppercase tracking-wide text-emerald-600">Active Methods</div><div className="mt-2 text-3xl font-black text-emerald-700">{activeCount}</div></div><div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-emerald-700 shadow-sm"><CreditCard size={20} /></div></div>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+            <div className="flex items-center justify-between"><div><div className="text-xs font-black uppercase tracking-wide text-amber-700">Cash Methods</div><div className="mt-2 text-3xl font-black text-amber-800">{cash}</div></div><div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-amber-700 shadow-sm"><Banknote size={20} /></div></div>
           </div>
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
             <div className="flex items-center justify-between"><div><div className="text-xs font-black uppercase tracking-wide text-blue-600">Bank Accounts</div><div className="mt-2 text-3xl font-black text-blue-700">{banks}</div></div><div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-blue-700 shadow-sm"><Building2 size={20} /></div></div>
@@ -206,7 +211,7 @@ const AdminPaymentTypes = () => {
                     <label className="block">
                       <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Type</span>
                       <select className="input !py-3" value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}>
-                        <option value="all">All types</option><option value="bank">Bank</option><option value="ewallet">eWallet</option>
+                        <option value="all">All types</option><option value="cash">Cash</option><option value="bank">Bank</option><option value="ewallet">eWallet</option>
                       </select>
                     </label>
                     <label className="block">
@@ -229,9 +234,9 @@ const AdminPaymentTypes = () => {
             <tbody className="divide-y divide-slate-100">
               {pagination.paginatedItems.map((item) => (
                 <tr key={item.id} className="transition hover:bg-slate-50/80">
-                  <td className="px-5 py-4"><div className="flex items-center gap-3"><span className={`grid h-11 w-11 place-items-center rounded-2xl ${item.type === "bank" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"}`}>{item.type === "bank" ? <Building2 size={19} /> : <Smartphone size={19} />}</span><div><p className="font-black text-slate-950">{item.name}</p><p className="text-xs font-bold capitalize text-slate-500">{item.type === "ewallet" ? "eWallet" : "Bank"}</p></div></div></td>
-                  <td className="px-5 py-4"><p className="font-bold text-slate-800">{item.bankName || item.name}</p><p className="mt-1 text-slate-600">{maskAccount(item.accountNumber)}</p><p className="text-xs text-slate-500">{item.accountName}</p></td>
-                  <td className="px-5 py-4">{item.qrUrl ? <a href={item.qrUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700"><QrCode size={16} /> View QR</a> : <span className="text-xs font-semibold text-slate-400">No QR uploaded</span>}</td>
+                  <td className="px-5 py-4"><div className="flex items-center gap-3"><span className={`grid h-11 w-11 place-items-center rounded-2xl ${item.type === "cash" ? "bg-emerald-50 text-emerald-700" : item.type === "bank" ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}>{item.type === "cash" ? <Banknote size={19} /> : item.type === "bank" ? <Building2 size={19} /> : <Smartphone size={19} />}</span><div><p className="font-black text-slate-950">{item.name}</p><p className="text-xs font-bold capitalize text-slate-500">{item.type === "cash" ? "Cash" : item.type === "ewallet" ? "eWallet" : "Bank"}</p></div></div></td>
+                  <td className="px-5 py-4">{item.type === "cash" ? <p className="font-bold text-emerald-700">Pay at authorized cashier</p> : <><p className="font-bold text-slate-800">{item.bankName || item.name}</p><p className="mt-1 text-slate-600">{maskAccount(item.accountNumber)}</p><p className="text-xs text-slate-500">{item.accountName}</p></>}</td>
+                  <td className="px-5 py-4">{item.qrUrl ? <a href={resolveFileUrl(item.qrUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700"><QrCode size={16} /> View QR</a> : <span className="text-xs font-semibold text-slate-400">No QR uploaded</span>}</td>
                   <td className="px-5 py-4"><span className={`rounded-full px-3 py-1 text-xs font-black ${item.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{item.status}</span></td>
                   <td className="px-5 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openEdit(item)} className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100" aria-label="Edit payment type"><Pencil size={16} /></button><button type="button" onClick={() => remove(item)} className="grid h-10 w-10 place-items-center rounded-xl bg-red-50 text-red-700 hover:bg-red-100" aria-label="Delete payment type"><Trash2 size={16} /></button></div></td>
                 </tr>
@@ -249,15 +254,15 @@ const AdminPaymentTypes = () => {
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-6"><div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Payment Setup</p><h2 className="mt-1 text-2xl font-black text-slate-950">{editing ? "Edit Payment Type" : "Add Payment Type"}</h2></div><button type="button" onClick={closeModal} className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200"><X size={18} /></button></div>
             <div className="grid gap-5 p-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Type</span><select className="input" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value, bankName: event.target.value === "ewallet" ? "" : current.bankName }))}><option value="bank">Bank</option><option value="ewallet">eWallet</option></select></label>
-                <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Display Name</span><input className="input" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder={form.type === "bank" ? "Example: BDO Savings" : "Example: GCash"} required /></label>
+                <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Type</span><select className="input" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value, bankName: event.target.value === "bank" ? current.bankName : "", accountNumber: event.target.value === "cash" ? "" : current.accountNumber, accountName: event.target.value === "cash" ? "" : current.accountName }))}><option value="cash">Cash</option><option value="bank">Bank</option><option value="ewallet">eWallet</option></select></label>
+                <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Display Name</span><input className="input" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder={form.type === "cash" ? "Cash" : form.type === "bank" ? "Example: BDO Savings" : "Example: GCash"} required /></label>
               </div>
               {form.type === "bank" && <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Bank Name</span><input className="input" value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} placeholder="Example: BDO Unibank" required /></label>}
-              <div className="grid gap-4 sm:grid-cols-2">
+              {form.type !== "cash" && <div className="grid gap-4 sm:grid-cols-2">
                 <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Account Number</span><input className="input" value={form.accountNumber} onChange={(event) => setForm((current) => ({ ...current, accountNumber: event.target.value }))} required /></label>
                 <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Account Owner</span><input className="input" value={form.accountName} onChange={(event) => setForm((current) => ({ ...current, accountName: event.target.value }))} required /></label>
-              </div>
-              <label className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4"><span className="flex items-center gap-2 text-sm font-black text-slate-700"><QrCode size={18} /> QR Image <span className="font-semibold text-slate-400">(Optional)</span></span><input type="file" accept="image/png,image/jpeg,image/webp" className="mt-3 block w-full text-sm text-slate-600" onChange={(event) => setForm((current) => ({ ...current, qr: event.target.files?.[0] || null }))} /><p className="mt-2 text-xs text-slate-500">Uploading a new QR replaces the existing QR image.</p></label>
+              </div>}
+              {form.type !== "cash" && <label className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4"><span className="flex items-center gap-2 text-sm font-black text-slate-700"><QrCode size={18} /> QR Image <span className="font-semibold text-slate-400">(Optional)</span></span><input type="file" accept="image/png,image/jpeg,image/webp" className="mt-3 block w-full text-sm text-slate-600" onChange={(event) => setForm((current) => ({ ...current, qr: event.target.files?.[0] || null }))} /><p className="mt-2 text-xs text-slate-500">Uploading a new QR replaces the existing QR image.</p></label>}
               <label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Payment Instructions</span><textarea className="input min-h-24" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} placeholder="Optional instructions shown to the client" /></label>
               <div className="grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Status</span><select className="input" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></label><label><span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">Sort Order</span><input className="input" type="number" value={form.sortOrder} onChange={(event) => setForm((current) => ({ ...current, sortOrder: event.target.value }))} /></label></div>
             </div>

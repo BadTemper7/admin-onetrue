@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Banknote,
-  Calculator,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
@@ -23,7 +22,7 @@ import Alert from "../../components/Alert"
 import Pagination from "../../components/ui/Pagination"
 import { usePagination } from "../../hooks/usePagination"
 import { useClickOutside } from "../../hooks/useClickOutside"
-import { api, getApiError } from "../../lib/api"
+import { api, getApiError, resolveFileUrl } from "../../lib/api"
 
 const statusLabels = {
   pending_admin_approval: "Pending Admin Approval",
@@ -143,7 +142,6 @@ const AdminBookingModule = ({ mode }) => {
   const [filters, setFilters] = useState({ status: config.defaultStatus, billingStatus: config.defaultBillingStatus, search: "" })
   const [approval, setApproval] = useState({ areaId: "", blockId: "", bay: 1, row: 1, tier: 1 })
   const [gateIn, setGateIn] = useState(initialGateIn)
-  const [operationForm, setOperationForm] = useState({ serviceType: "container_yard" })
   const [rejectReason, setRejectReason] = useState("")
   const [paymentRejectReason, setPaymentRejectReason] = useState("")
   const [additionalCharge, setAdditionalCharge] = useState({ description: "", quantity: "1", rateAmount: "", notes: "" })
@@ -157,7 +155,7 @@ const AdminBookingModule = ({ mode }) => {
   const slotsRequestRef = useRef({ key: "", promise: null })
   const realtimeRefreshTimerRef = useRef(null)
 
-  const selectedBooking = useMemo(() => bookings.find((booking) => booking.id === selectedId) || bookings[0] || null, [bookings, selectedId])
+  const selectedBooking = useMemo(() => bookings.find((booking) => booking.id === selectedId) || null, [bookings, selectedId])
   const selectedBlock = useMemo(() => blocks.find((block) => String(block.id) === String(approval.blockId)), [blocks, approval.blockId])
   const usableBlocks = useMemo(() => blocks.filter((block) => {
     const isActive = !block.status || block.status === "active"
@@ -340,7 +338,6 @@ const AdminBookingModule = ({ mode }) => {
       inspectionRemarks: selectedBooking.inspectionRemarks || "",
     })
 
-    setOperationForm({ serviceType: selectedBooking.serviceType || "container_yard" })
   }, [selectedBooking?.id])
 
   useEffect(() => {
@@ -430,12 +427,6 @@ const AdminBookingModule = ({ mode }) => {
     "Container marked as stored. Final billing will compute after the client submits Date Out."
   )
 
-  const saveBillingOperation = () => runAction(
-    () => api.patch(`/admin/bookings/${selectedBooking.id}/billing-operation`, operationForm),
-    ["stored_in_assigned_area", "gate_out_requested", "gate_out_approved"].includes(selectedBooking.status)
-      ? "Billing operation saved and bill recomputed."
-      : "Billing operation saved. It will compute after Mark Stored."
-  )
 
   const approvePayment = () => runAction(
     () => api.patch(`/admin/bookings/${selectedBooking.id}/payment/approve`, { remarks }),
@@ -733,28 +724,10 @@ const AdminBookingModule = ({ mode }) => {
                 <div><span className="font-black text-slate-500">Size:</span> {selectedBooking.containerSize}ft</div>
                 <div><span className="font-black text-slate-500">Type:</span> {selectedBooking.containerType?.replace("_", " ")}</div>
                 <div><span className="font-black text-slate-500">Load:</span> {selectedBooking.containerLoadStatus}</div>
-                <div><span className="font-black text-slate-500">Service:</span> {selectedBooking.serviceType === "stripping_stuffing_mano" ? "Stripping / Stuffing with Mano" : "Container Yard Operation"}</div>
                 <div><span className="font-black text-slate-500">Shipping Line:</span> {selectedBooking.shippingLine}</div>
                 <div><span className="font-black text-slate-500">In Date:</span> {formatDate(getBookingInDate(selectedBooking))}</div>
                 <div><span className="font-black text-slate-500">Requested Date Out:</span> {formatDate(getBookingOutDate(selectedBooking))}</div>
                 <div><span className="font-black text-slate-500">Assigned Slot:</span> {selectedBooking.assignedSlotNumber || "Pending"}</div>
-              </div>
-
-              <div className="mt-4 rounded-3xl border border-blue-100 bg-blue-50 p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                  <Field label="Operation Made / Billing Service" hint="Lift On, Lift Off, and storage are automatic. Use this only for optional service billing before payment.">
-                    <select className="input bg-white" value={operationForm.serviceType} onChange={(event) => setOperationForm({ serviceType: event.target.value })} disabled={!['unpaid', 'payment_rejected'].includes(selectedBooking.billingStatus)}>
-                      <option value="container_yard">Container Yard Operation</option>
-                      <option value="stripping_stuffing_mano">Stripping / Stuffing with Mano</option>
-                    </select>
-                  </Field>
-                  <button type="button" onClick={saveBillingOperation} className="btn-primary shrink-0" disabled={saving || !['unpaid', 'payment_rejected'].includes(selectedBooking.billingStatus)}>
-                    <Calculator size={16} /> Save Operation
-                  </button>
-                </div>
-                <p className="mt-3 text-xs font-bold leading-5 text-blue-800">
-                  Client bill is computed before payment after the client submits Date Out in the gate-out request. After payment is submitted or approved, this operation cannot be changed.
-                </p>
               </div>
             </div>
 
@@ -769,7 +742,7 @@ const AdminBookingModule = ({ mode }) => {
                   {(selectedBooking.documents || []).map((document, index) => (
                     <a
                       key={`${document.url}-${index}`}
-                      href={document.secureUrl || document.url}
+                      href={resolveFileUrl(document.secureUrl || document.url)}
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-300 hover:bg-emerald-50"
@@ -848,7 +821,7 @@ const AdminBookingModule = ({ mode }) => {
                       {rowOptions.map((value) => <option key={value} value={value}>Row {value}</option>)}
                     </select>
                   </Field>
-                  <Field label="Tier / High">
+                  <Field label="Tier">
                     <select className="input" value={approval.tier} onChange={(event) => setApproval((current) => ({ ...current, tier: event.target.value }))} disabled={!selectedBlock}>
                       {tierOptions.map((value) => <option key={value} value={value}>Tier {value}</option>)}
                     </select>
@@ -857,7 +830,7 @@ const AdminBookingModule = ({ mode }) => {
                 {selectedBlock && (
                   <div className="mt-4 space-y-3">
                     <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
-                      {isPreAdviceApprovalMode ? `${selectedBlock.areaName || selectedBlock.name || "Yard Area"}` : (selectedBlock.name || selectedBlock.code || "Selected block")}: {selectedBlock.occupiedSlots}/{selectedBlock.capacityTeu} TEU used, {selectedBlock.availableSlots} TEU remaining. Selected location: B{approval.bay}-R{approval.row}-T{approval.tier}.
+                      {isPreAdviceApprovalMode ? `${selectedBlock.areaName || selectedBlock.name || "Yard Area"}` : (selectedBlock.name || selectedBlock.code || "Selected block")}: {selectedBlock.occupiedSlots}/{selectedBlock.capacityTeu} {selectedBlock.capacityUnit || (Number(selectedBlock.containerSize) === 20 ? "TEU" : "FEU")} used, {selectedBlock.availableSlots} {selectedBlock.capacityUnit || (Number(selectedBlock.containerSize) === 20 ? "TEU" : "FEU")} remaining. Selected location: B{approval.bay}-R{approval.row}-T{approval.tier}.
                     </div>
                     {selectedSlotTaken ? (
                       <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
@@ -958,7 +931,7 @@ const AdminBookingModule = ({ mode }) => {
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {(selectedBooking.paymentProofs || []).map((doc, index) => (
-                      <a key={`${doc.url}-${index}`} className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 underline" href={doc.secureUrl || doc.url} target="_blank" rel="noreferrer">
+                      <a key={`${doc.url}-${index}`} className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 underline" href={resolveFileUrl(doc.secureUrl || doc.url)} target="_blank" rel="noreferrer">
                         {doc.label || "Payment Proof"} {index + 1}
                       </a>
                     ))}

@@ -3,6 +3,7 @@ import { io } from "socket.io-client"
 import { SOCKET_URL } from "../lib/api"
 
 const realtimeEvents = [
+  "socket:connected",
   "client:registered",
   "client:approved",
   "client:rejected",
@@ -57,34 +58,53 @@ export const useSocket = ({ token, enabled = true }) => {
   useEffect(() => {
     if (!enabled || !token) return undefined
 
+    // WebSocket-only prevents service workers/Workbox and load balancers from
+    // caching or splitting the multi-request Socket.IO polling handshake.
     const socket = io(SOCKET_URL, {
+      path: "/socket.io",
       auth: { token },
-      transports: ["websocket", "polling"],
+      transports: ["websocket"],
+      upgrade: false,
+      rememberUpgrade: true,
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 800,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 15000,
     })
 
-    socket.on("connect", () => setConnected(true))
-    socket.on("disconnect", () => setConnected(false))
-
-    const pushEvent = (type) => (payload) => {
-      const eventItem = { type, payload, time: new Date().toISOString() }
-      setEvents((prev) => [eventItem, ...prev.slice(0, 19)])
-
-      window.dispatchEvent(
-        new CustomEvent("otli:realtime", {
-          detail: eventItem,
-        })
-      )
+    const handleConnect = () => setConnected(true)
+    const handleDisconnect = () => setConnected(false)
+    const handleConnectError = (error) => {
+      setConnected(false)
+      console.warn("Realtime connection unavailable:", error?.message || error)
     }
 
-    realtimeEvents.forEach((eventName) => {
-      socket.on(eventName, pushEvent(eventName))
+    socket.on("connect", handleConnect)
+    socket.on("disconnect", handleDisconnect)
+    socket.on("connect_error", handleConnectError)
+
+    const handlers = realtimeEvents.map((eventName) => {
+      const handler = (payload) => {
+        const eventItem = { type: eventName, payload, time: new Date().toISOString() }
+        setEvents((prev) => [eventItem, ...prev.slice(0, 19)])
+
+        window.dispatchEvent(
+          new CustomEvent("otli:realtime", {
+            detail: eventItem,
+          })
+        )
+      }
+
+      socket.on(eventName, handler)
+      return [eventName, handler]
     })
 
     return () => {
-      realtimeEvents.forEach((eventName) => socket.off(eventName))
+      handlers.forEach(([eventName, handler]) => socket.off(eventName, handler))
+      socket.off("connect", handleConnect)
+      socket.off("disconnect", handleDisconnect)
+      socket.off("connect_error", handleConnectError)
       socket.disconnect()
     }
   }, [enabled, token])

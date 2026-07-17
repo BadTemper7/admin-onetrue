@@ -17,6 +17,17 @@ export const SOCKET_URL = trimTrailingSlash(
   import.meta.env.VITE_SOCKET_URL || defaultServerUrl,
 );
 
+export const resolveFileUrl = (value) => {
+  const fileUrl = String(value || "").trim();
+  if (!fileUrl) return "";
+
+  if (/^(https?:)?\/\//i.test(fileUrl) || fileUrl.startsWith("blob:") || fileUrl.startsWith("data:")) {
+    return fileUrl;
+  }
+
+  return `${SOCKET_URL}/${fileUrl.replace(/^\/+/, "")}`;
+};
+
 export const TOKEN_KEY = "otli_token";
 export const USER_KEY = "otli_user";
 

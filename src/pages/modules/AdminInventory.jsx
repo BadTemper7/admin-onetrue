@@ -50,11 +50,7 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString()
 }
 
-const getTeu = (size) => {
-  if (Number(size) === 40) return 2
-  if (Number(size) === 45) return 3
-  return 1
-}
+const getTeu = (size) => Number(size) === 40 ? 2 : 1
 
 const Field = ({ label, children, hint }) => (
   <label className="block">
@@ -141,7 +137,7 @@ const LocationModal = ({ open, container, areas, blocks, slots, loadingBlocks, s
             <Field label="Row">
               <input className="input" name="row" type="number" min="1" max={selectedBlock?.rowCount || undefined} value={form.row} onChange={handleChange} required />
             </Field>
-            <Field label="Tier / High">
+            <Field label="Tier">
               <input className="input" name="tier" type="number" min="1" max={selectedBlock?.tierCount || undefined} value={form.tier} onChange={handleChange} required />
             </Field>
           </div>

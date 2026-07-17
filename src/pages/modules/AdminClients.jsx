@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Alert from "../../components/Alert";
-import { api, getApiError } from "../../lib/api";
+import { api, getApiError, resolveFileUrl } from "../../lib/api";
 import Pagination from "../../components/ui/Pagination";
 import { usePagination } from "../../hooks/usePagination";
 import { useClickOutside } from "../../hooks/useClickOutside";
@@ -369,7 +369,7 @@ const AdminClients = () => {
                           <a
                             key={doc.publicId}
                             className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-                            href={doc.secureUrl || doc.url}
+                            href={resolveFileUrl(doc.secureUrl || doc.url)}
                             target="_blank"
                             rel="noreferrer"
                           >
@@ -509,6 +509,34 @@ const AdminClients = () => {
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-5 lg:col-span-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-black uppercase tracking-wide text-slate-500">
+                      Legal Consent Record
+                    </h4>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                      Registration consent is recorded by the backend and cannot be replaced by the admin review action.
+                    </p>
+                  </div>
+                  <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${selectedClient.legalConsent?.termsAccepted && selectedClient.legalConsent?.privacyAccepted && selectedClient.legalConsent?.representativeAuthorityConfirmed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {selectedClient.legalConsent?.termsAccepted && selectedClient.legalConsent?.privacyAccepted && selectedClient.legalConsent?.representativeAuthorityConfirmed ? "Complete" : "Legacy / Incomplete"}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Detail label="Terms Accepted" value={selectedClient.legalConsent?.termsAccepted ? "Yes" : "No"} />
+                  <Detail label="Privacy Accepted" value={selectedClient.legalConsent?.privacyAccepted ? "Yes" : "No"} />
+                  <Detail label="Authority Confirmed" value={selectedClient.legalConsent?.representativeAuthorityConfirmed ? "Yes" : "No"} />
+                  <Detail
+                    label="Accepted At"
+                    value={selectedClient.legalConsent?.acceptedAt ? new Date(selectedClient.legalConsent.acceptedAt).toLocaleString() : "N/A"}
+                  />
+                  <Detail label="Terms Version" value={selectedClient.legalConsent?.termsVersion} />
+                  <Detail label="Privacy Version" value={selectedClient.legalConsent?.privacyPolicyVersion} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-5 lg:col-span-2">
                 <h4 className="text-sm font-black uppercase tracking-wide text-slate-500">
                   Uploaded Documents
                 </h4>
@@ -518,7 +546,7 @@ const AdminClients = () => {
                     selectedClient.documents.map((doc) => (
                       <a
                         key={doc.publicId}
-                        href={doc.secureUrl || doc.url}
+                        href={resolveFileUrl(doc.secureUrl || doc.url)}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100"

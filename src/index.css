@@ -487,7 +487,7 @@ label + .field-validation-error,
   pointer-events: none;
 }
 
-.yard-3d-helper-high {
+.yard-3d-helper-bay {
   left: 28px;
   top: 120px;
   writing-mode: vertical-rl;
@@ -500,7 +500,7 @@ label + .field-validation-error,
   transform: translateX(-50%);
 }
 
-.yard-3d-helper-line {
+.yard-3d-helper-tier {
   bottom: 66px;
   right: 38px;
 }
